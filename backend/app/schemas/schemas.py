@@ -33,6 +33,7 @@ class GoogleCredentialIn(BaseModel):
     credential: str = Field(min_length=20, max_length=10000)
 
 
+
 # ------------------------------------------------------------ key/value rows
 
 class KeyValueIn(BaseModel):
@@ -181,7 +182,7 @@ class HistoryOut(BaseModel):
     url: str
     status: int | None
     duration_ms: int | None
-    used_bridge: bool
+    used_local_request: bool
     created_at: datetime
     request: RequestOut | None = None
 

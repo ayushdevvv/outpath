@@ -727,7 +727,7 @@ export function SettingsPanel() {
           <p className="mt-5 text-[15px] font-semibold text-text">Request execution</p>
           <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
             A request is sent either through Outpath's controlled server execution path or, for local/private
-            targets, through the Outpath Local Bridge on your machine. Server requests are validated before
+            targets, directly from your browser using Local Network Access. Server requests are validated before
             connection and redirects are re-checked per hop.
           </p>
         </Card>

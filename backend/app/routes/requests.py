@@ -135,10 +135,9 @@ async def duplicate_request(
 async def execute(request: Request, payload: ExecuteIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
 
     """
-    Executes a request the browser could not send directly (cross-origin,
-    or the user wants Outpath's measured timing/history). Local and private
-    targets are rejected here by design — see services/execution.py — and
-    must go through the browser extension's local bridge instead.
+    Executes non-local requests on Outpath's server. Local/private targets are
+    rejected here by design; the browser executes those directly using Local
+    Network Access and then writes lightweight history metadata back to Outpath.
     """
     variables: dict[str, str] = {}
     secret_values: set[str] = set()
@@ -198,7 +197,7 @@ async def execute(request: Request, payload: ExecuteIn, user: User = Depends(get
                 duration_ms=None,
                 size_bytes=None,
                 error=exc.message,
-                used_bridge=False,
+                used_local_request=False,
             )
         )
         await db.commit()
@@ -219,7 +218,7 @@ async def execute(request: Request, payload: ExecuteIn, user: User = Depends(get
             status=result["status"],
             duration_ms=result["duration_ms"],
             size_bytes=result["size_bytes"],
-            used_bridge=False,
+            used_local_request=False,
         )
     )
     await db.commit()

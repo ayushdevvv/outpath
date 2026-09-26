@@ -47,9 +47,11 @@ export function isLocalTarget(url) {
   if (LOCAL_HOSTS.has(host)) return true
   if (host.endsWith('.localhost') || host.endsWith('.local')) return true
   if (/^10\./.test(host)) return true
+  if (/^169\.254\./.test(host)) return true
   if (/^192\.168\./.test(host)) return true
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true
   if (/^(fc|fd)[0-9a-f]{2}:/i.test(host) || /^fe80:/i.test(host) || /^ff[0-9a-f]{2}:/i.test(host)) return true
+  if (/^::ffff:(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(host)) return true
   return false
 }
 
@@ -201,68 +203,3 @@ export function redactSecrets(text, secretValues) {
   }
   return out
 }
-
-
-/**
- * Browser-side client for the optional Outpath Local Bridge extension.
- * Communication is isolated to the current page origin and uses one-shot ids
- * so an unrelated window message can never satisfy a request.
- */
-function bridgeMessage(type, payload, { timeoutMs = 1500 } = {}) {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Local bridge is only available in a browser.'))
-  }
-
-  const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-
-  return new Promise((resolve, reject) => {
-    let settled = false
-    const finish = () => {
-      if (settled) return
-      settled = true
-      window.clearTimeout(timer)
-      window.removeEventListener('message', onMessage)
-    }
-    const timer = window.setTimeout(() => {
-      finish()
-      const error = new Error('The Outpath Local Bridge is not available on this page.')
-      error.code = 'bridge_unavailable'
-      reject(error)
-    }, timeoutMs)
-
-    const onMessage = (event) => {
-      if (event.source !== window || event.origin !== window.location.origin) return
-      const data = event.data
-      if (!data || data.source !== 'outpath-bridge' || data.id !== requestId) return
-      finish()
-      if (data.type === 'RESULT' || data.type === 'PONG') {
-        resolve(data.payload)
-        return
-      }
-      const error = new Error(data.payload?.message || 'The Local Bridge request failed.')
-      error.code = data.payload?.code
-      reject(error)
-    }
-
-    window.addEventListener('message', onMessage)
-    window.postMessage({ source: 'outpath-app', type, id: requestId, payload }, window.location.origin)
-  })
-}
-
-export function pingBridge(options) {
-  return bridgeMessage('PING', undefined, options)
-}
-
-export async function bridgeAvailable(options) {
-  try {
-    const payload = await pingBridge(options)
-    return { available: true, version: payload?.version || null }
-  } catch {
-    return { available: false, version: null }
-  }
-}
-
-export function bridgeRequest(payload, { timeoutMs = 12000 } = {}) {
-  return bridgeMessage('EXECUTE', payload, { timeoutMs })
-}
-

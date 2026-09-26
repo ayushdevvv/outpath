@@ -62,6 +62,7 @@ class OAuthAccount(Base):
     user: Mapped["User"] = relationship(back_populates="oauth_accounts")
 
 
+
 class Collection(Base):
     __tablename__ = "collections"
 
@@ -178,7 +179,7 @@ class RequestHistory(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    used_bridge: Mapped[bool] = mapped_column(Boolean, default=False)
+    used_local_request: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True

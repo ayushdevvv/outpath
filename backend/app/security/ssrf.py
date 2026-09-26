@@ -4,8 +4,8 @@ shape of a server-side request forgery vulnerability if left unchecked. This
 module is the single gate every outbound request must pass through.
 
 Anything that resolves to localhost or a private/link-local range is refused
-here — those targets are only ever reachable through the browser extension's
-local bridge, which runs on the user's own machine and never through us.
+here. Those targets are intentionally handled by the browser's Local Network
+Access path and are never proxied through the Outpath server.
 """
 
 import ipaddress
@@ -66,7 +66,7 @@ def validate_outbound_url(raw_url: str) -> ValidatedTarget:
     host_lower = host.rstrip(".").lower()
     if host_lower in _BLOCKED_HOSTS or host_lower in {"localhost"}:
         raise SsrfBlocked(
-            "This looks like a local or internal address. Send it through the local bridge instead."
+            "This looks like a local or internal address. Send it directly from the browser using Local Network Access."
         )
 
     try:

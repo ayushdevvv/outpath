@@ -110,11 +110,11 @@ export function stagesFromRun({ phase, request, result, assertions, error, local
   }
 
   if (phase === 'sending') {
-    out[2] = { ...out[2], state: 'active', detail: local ? 'local bridge' : 'outpath server' }
+    out[2] = { ...out[2], state: 'active', detail: local ? 'browser local' : 'outpath server' }
     return out
   }
 
-  out[2] = { ...out[2], state: 'ok', detail: local ? 'local bridge' : 'outpath server' }
+  out[2] = { ...out[2], state: 'ok', detail: local ? 'browser local' : 'outpath server' }
 
   if (error) return fail(3, error)
 

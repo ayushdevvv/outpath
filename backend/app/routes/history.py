@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 router = APIRouter(tags=["history"])
 
 
-class BridgeHistoryIn(BaseModel):
+class LocalHistoryIn(BaseModel):
     request_id: uuid.UUID | None = None
     method: str = Field(min_length=3, max_length=10)
     url: str = Field(min_length=1, max_length=8192)
@@ -52,11 +52,12 @@ async def list_history(
 
 @router.post("/api/history", response_model=HistoryOut, status_code=201)
 async def log_history(
-    payload: BridgeHistoryIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    payload: LocalHistoryIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    """Records a send that was executed by the browser extension's local
-    bridge, which Outpath's server never sees directly (see services/execution.py
-    for why localhost requests aren't proxied server-side)."""
+    """Records a request executed directly by the browser against a local/private target.
+
+    The local target is never proxied through Outpath's server; only timing/result
+    metadata is persisted here after the browser receives the response."""
     if payload.request_id:
         owned_request = await db.scalar(
             select(ApiRequest.id).where(ApiRequest.id == payload.request_id, ApiRequest.user_id == user.id)
@@ -73,7 +74,7 @@ async def log_history(
         duration_ms=payload.duration_ms,
         size_bytes=payload.size_bytes,
         error=payload.error,
-        used_bridge=True,
+        used_local_request=True,
     )
     db.add(entry)
     await db.commit()

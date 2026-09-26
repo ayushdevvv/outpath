@@ -14,8 +14,12 @@ class Settings(BaseSettings):
     session_cookie_name: str = "outpath_session"
     session_max_age_seconds: int = 60 * 60 * 24 * 14  # 14 days
 
-    # CORS: only the web app's own origin(s) may send credentialed requests.
-    allowed_origins: list[str] = ["http://localhost:5173"]
+    # CORS for the Outpath web app. Add your Vercel preview origin here when testing a preview deployment.
+    allowed_origins: list[str] = [
+        "https://outpath.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
     # Google Identity Services client ID used to verify the React-issued ID token.
     google_client_id: str = ""

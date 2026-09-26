@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Copy, ExternalLink, Plus, Puzzle, RefreshCw, Save, Send, ShieldCheck, Trash2, Wifi } from 'lucide-react'
-import { Badge, Button, Dot, Input, Modal, Select, Tabs, cx } from '@/components/ui'
+import { Copy, Plus, Save, Send, Trash2, Wifi } from 'lucide-react'
+import { Badge, Button, Dot, Input, Select, Tabs, cx } from '@/components/ui'
 import OutpathPipeline, { stagesFromRun } from '@/components/OutpathPipeline'
 import { api } from '@/lib/api'
 import { useToast } from '@/lib/toast'
+import { executeLocalRequest, LocalRequestError } from '@/lib/lna'
 import {
   ASSERTION_KINDS,
   METHODS,
@@ -13,8 +14,6 @@ import {
   resolveAll,
   resolveVars,
   statusTone,
-  bridgeAvailable,
-  bridgeRequest,
   isLocalTarget,
   redactSecrets,
 } from '@/lib/engine'
@@ -128,12 +127,9 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
   const [run, setRun] = useState({ phase: 'idle' })
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [bridgeState, setBridgeState] = useState({ status: 'unknown', version: null })
-  const [bridgePrompt, setBridgePrompt] = useState(null)
+  const [localAccessState, setLocalAccessState] = useState('ready')
   const abortRef = useRef(null)
 
-  const extensionId = import.meta.env.VITE_BRIDGE_EXTENSION_ID || '06612ea2ea284ec39bd19ef5fbf1523630e4fa972d2ffb459d598b845572b3d0'
-  const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || `https://chromewebstore.google.com/detail/outpath-local-bridge/${extensionId}`
 
   // Collections only exist once saved — the picker only ever needs to
   // offer genuine, saved collections.
@@ -159,25 +155,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
   const isDirty = JSON.stringify(req) !== savedFingerprint
 
-  useEffect(() => {
-    let cancelled = false
-    const local = isLocalTarget(resolvedUrl.value)
-    if (!local) {
-      setBridgeState({ status: 'unknown', version: null })
-      return undefined
-    }
-
-    setBridgeState((current) => ({ ...current, status: 'checking' }))
-    const timer = window.setTimeout(async () => {
-      const state = await bridgeAvailable({ timeoutMs: 1000 })
-      if (!cancelled) setBridgeState({ status: state.available ? 'connected' : 'missing', version: state.version })
-    }, 250)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [resolvedUrl.value])
   const canSend = req.url.trim().length > 0 && run.phase !== 'sending'
 
   useEffect(() => {
@@ -223,19 +200,13 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
     const local = isLocalTarget(payload.url)
     try {
       let raw
+      const controller = new AbortController()
+      abortRef.current = controller
       if (local) {
-        const bridge = await bridgeAvailable({ timeoutMs: 1200 })
-        if (!bridge.available) {
-          setBridgeState({ status: 'missing', version: null })
-          setRun({ phase: 'idle', request: rawPayload, local: true })
-          setBridgePrompt({ type: 'install', target: payload.url })
-          return
-        }
-        setBridgeState({ status: 'connected', version: bridge.version })
-        raw = await bridgeRequest(payload)
+        setLocalAccessState('checking')
+        raw = await executeLocalRequest(payload, { signal: abortRef.current?.signal })
+        setLocalAccessState('ready')
       } else {
-        const controller = new AbortController()
-        abortRef.current = controller
         raw = await api.post(
           '/api/requests/execute',
           {
@@ -290,7 +261,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             size_bytes: sizeBytes,
           })
         } catch {
-          // A bridge request already happened successfully; history failure
+          // A local browser request already happened successfully; history failure
           // should not turn a successful local API call into a failed send.
         }
       }
@@ -298,11 +269,8 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
       onSaved?.()
     } catch (err) {
       const message = err.message || 'The request could not be completed.'
-      if (local && err.code === 'permission_required') {
-        setBridgeState((state) => ({ ...state, status: 'connected' }))
-        setRun({ phase: 'idle', request: rawPayload, local: true })
-        setBridgePrompt({ type: 'permission', target: payload.url })
-        return
+      if (local && err instanceof LocalRequestError) {
+        setLocalAccessState('error')
       }
       if (local) {
         const secretValues = (activeEnv?.variables || []).filter((v) => v.secret && v.value).map((v) => v.value)
@@ -461,9 +429,9 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
               {resolvedUrl.value}
             </p>
             {local && (
-              <span className="mono flex shrink-0 items-center gap-1.5 text-[10.5px] text-hold">
-                {bridgeState.status === 'connected' ? <Wifi size={11} /> : bridgeState.status === 'checking' ? <RefreshCw size={11} className="animate-spin" /> : <Puzzle size={11} />}
-                {bridgeState.status === 'connected' ? 'local bridge connected' : bridgeState.status === 'checking' ? 'checking bridge' : 'bridge required'}
+              <span className={cx('mono flex shrink-0 items-center gap-1.5 text-[10.5px]', localAccessState === 'error' ? 'text-fail' : 'text-hold')}>
+                <Wifi size={11} />
+                {localAccessState === 'checking' ? 'local network permission' : localAccessState === 'error' ? 'local access blocked' : 'direct local request'}
               </span>
             )}
           </div>
@@ -660,64 +628,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
         </section>
       </div>
 
-      <Modal
-        open={!!bridgePrompt}
-        onClose={() => setBridgePrompt(null)}
-        title={bridgePrompt?.type === 'permission' ? 'Allow local network access' : 'Install the Outpath Local Bridge'}
-        description={bridgePrompt?.target ? `Local target detected: ${bridgePrompt.target}` : 'Local APIs never pass through the Outpath server.'}
-        size="md"
-        footer={
-          <>
-            <Button variant="outline" size="sm" onClick={() => setBridgePrompt(null)}>
-              Not now
-            </Button>
-            <Button
-              variant="premium"
-              size="sm"
-              onClick={() => {
-                if (extensionInstallUrl) window.open(extensionInstallUrl, '_blank', 'noopener,noreferrer')
-              }}
-            >
-              <ExternalLink size={14} /> {bridgePrompt?.type === 'permission' ? 'Open extension page' : 'Get extension'}
-            </Button>
-          </>
-        }
-      >
-        {bridgePrompt?.type === 'permission' ? (
-          <div className="space-y-4">
-            <div className="flex gap-3 rounded-xl border border-hold/20 bg-hold/5 p-3">
-              <ShieldCheck className="mt-0.5 shrink-0 text-hold" size={18} />
-              <div>
-                <p className="text-sm font-semibold text-text">One-time permission</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Open the Outpath Bridge extension popup and press <span className="mono text-text">Allow local access</span>. Then return here and press Send again.</p>
-              </div>
-            </div>
-            <div className="rounded-xl border border-line bg-black/20 p-3">
-              <p className="mono text-[11px] text-muted">TARGET</p>
-              <p className="mono mt-1 break-all text-[12px] text-text">{bridgePrompt?.target}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex gap-3 rounded-xl border border-accent/20 bg-accent/5 p-3">
-              <Puzzle className="mt-0.5 shrink-0 text-accent" size={18} />
-              <div>
-                <p className="text-sm font-semibold text-text">Local requests use your browser</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Outpath blocks localhost and private network targets on the backend for SSRF safety. The browser extension is the secure local bridge.</p>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {[['1', 'Install', 'Add Outpath Bridge to Chrome.'], ['2', 'Reload', 'Reload this Outpath tab after installing.'], ['3', 'Send', 'Press Send again to run locally.']].map(([n, title, body]) => (
-                <div key={n} className="rounded-xl border border-line bg-black/20 p-3">
-                  <div className="mono grid h-6 w-6 place-items-center rounded-md bg-white/5 text-[10px] text-muted">{n}</div>
-                  <p className="mt-2 text-[12px] font-semibold text-text">{title}</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted">{body}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

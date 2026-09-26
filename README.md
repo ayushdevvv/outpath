@@ -1,59 +1,121 @@
 # Outpath
 
-Outpath is a developer-focused API testing workspace with a secure local bridge.
+Outpath is a web-first API testing workspace. Normal requests execute through the hosted FastAPI backend; local/private requests execute **directly from the browser** using Chrome/Chromium Local Network Access (LNA).
 
-## Request execution model
+## Local API testing
 
-- **Public APIs** are executed by the FastAPI backend through the guarded `/api/requests/execute` endpoint. SSRF validation blocks localhost, private ranges, link-local addresses and metadata endpoints.
-- **Local/private APIs** (`localhost`, `127.0.0.1`, `10.x`, `172.16-31.x`, `192.168.x`, selected IPv6 private/link-local ranges) are never proxied through the backend. The frontend detects them and uses the Outpath Local Bridge browser extension.
-- When the extension is missing, the request workspace shows an install prompt instead of waiting for a timeout.
-- If the extension is installed but a LAN origin needs optional host permission, the extension stores the pending origin and its popup provides the user-gesture permission button. Return to Outpath and send again after granting access.
+There is no Chrome extension, Web Store setup, Cloudflare Tunnel setup, or local installer in this build.
 
-## Local bridge development
+Flow:
 
-1. Load the `extension/` directory as an unpacked Chrome/Chromium extension.
-2. Run the frontend on `http://localhost:5173` or another origin listed in `extension/manifest.json`.
-3. If a local LAN request needs permission, open the Outpath Bridge toolbar popup and click **Allow local access** for the pending origin.
-4. For a production deployment, add the actual Outpath origin to `content_scripts.matches` and publish/update `VITE_EXTENSION_INSTALL_URL` in the frontend environment.
+```text
+https://outpath.vercel.app
+        │
+        │ browser fetch + Local Network Access permission
+        ▼
+http://127.0.0.1:8000
+        │
+        ▼
+local/private API
+```
 
-## Environment
+The browser request uses Fetch `targetAddressSpace` (`loopback` for localhost/127.0.0.1 and `local` for private/LAN targets). Chrome's LNA permission is controlled by the browser; the page must be served from a secure context such as HTTPS.
 
-Frontend:
+### Target API CORS
+
+A local API must allow the Outpath page origin. For the deployed app:
+
+```text
+https://outpath.vercel.app
+```
+
+For local development also allow:
+
+```text
+http://localhost:5173
+http://127.0.0.1:5173
+```
+
+FastAPI example:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://outpath.vercel.app",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+If the target API does not send CORS headers, the browser will block the response even when LNA permission is granted. That is a browser security rule; this web-only build intentionally does not bypass it.
+
+## Backend CORS
+
+The Outpath FastAPI backend is already configured for the deployed Outpath origin and local Vite development. Set `ALLOWED_ORIGINS` in Render to the exact frontend origins you use, for example:
 
 ```env
-VITE_API_URL=http://localhost:8000
-VITE_EXTENSION_INSTALL_URL=https://chromewebstore.google.com/
+ALLOWED_ORIGINS=["https://outpath.vercel.app","http://localhost:5173"]
 ```
+
+## Quick local LNA test
+
+This repo includes a tiny FastAPI target with the required CORS headers. Start it in a second terminal:
+
+```powershell
+cd examples\local-api
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --host 127.0.0.1 --port 8000
+```
+
+Then in Outpath use:
+
+```text
+GET http://127.0.0.1:8000/api/test
+POST http://127.0.0.1:8000/api/echo
+```
+
+For the POST body:
+
+```json
+{
+  "name": "Outpath",
+  "value": 100
+}
+```
+
+On a supported Chrome build, the first private/LAN request can trigger the Local Network Access permission prompt. Allow it and send again if the browser asks. Chrome launched the LNA permission in stable with Chrome 142; the request must come from a secure context.
+
+## Local development
 
 Backend:
 
-```env
-DATABASE_URL=postgresql+asyncpg://...
-SECRET_KEY=...
-ALLOWED_ORIGINS=["http://localhost:5173"]
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-Keep real secrets out of source control.
+Frontend:
 
+```powershell
+cd frontend
+npm install
+npm run dev
+```
 
-## Google sign-in
+Open the Vite app at `http://localhost:5173`.
 
-Google sign-in now uses Google Identity Services in React. There is no Google client secret or redirect URI in Outpath. Set only `VITE_GOOGLE_CLIENT_ID` in the frontend and set the same client ID as `google_client_id` in the FastAPI environment so the backend can verify the signed ID token and issue the existing Outpath session cookie. The backend does not need a Google client secret or OAuth redirect URI.
+## Production
 
-For the local bridge, set `VITE_BRIDGE_EXTENSION_ID=06612ea2ea284ec39bd19ef5fbf1523630e4fa972d2ffb459d598b845572b3d0` and use the direct Chrome Web Store URL configured in `VITE_EXTENSION_INSTALL_URL`.
-
-## Google Sign-In (React popup)
-Outpath uses Google Identity Services in explicit popup mode. Configure only `VITE_GOOGLE_CLIENT_ID` in the frontend and add the deployed frontend origin (for example `https://outpath.vercel.app`) under **Authorized JavaScript origins** in Google Cloud. Do not configure a redirect URI for this flow. The React callback receives the Google ID token and sends it to `/api/auth/google/verify` for session establishment.
-
-
-
-## Deployment notes
-
-- Render backend: Python 3.13.5 (`backend/.python-version`), `asyncpg` 0.31, and SQLAlchemy asyncio extras are pinned for deployment.
-- Production browser sessions use secure `SameSite=None` cookies because the Vercel frontend and Render API are different sites. `credentials: include` is enabled on frontend API calls.
-- Set `VITE_API_URL` on Vercel to the deployed FastAPI URL and `ALLOWED_ORIGINS` on Render to the exact Vercel origin as a JSON array.
-- Google sign-in uses Google Identity Services popup mode in React. The backend only verifies the returned ID token and creates the existing session; no Google client secret or redirect URI is required for this flow.
-
-### Google sign-in
-
-Outpath uses the same stable flow as the working Cloud app: `@react-oauth/google` renders the standard Google button in popup mode, the browser sends the signed ID token to `/api/auth/google`, FastAPI verifies it with `GOOGLE_CLIENT_ID`, and the backend issues the normal Outpath session. One Tap is intentionally disabled for this button.
+The Vercel app uses the `/api/*` rewrite to the Render backend. Google authentication remains on the existing OAuth/session flow.

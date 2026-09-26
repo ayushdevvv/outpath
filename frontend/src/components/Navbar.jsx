@@ -8,7 +8,6 @@ const LINKS = [
   { href: '#pipeline', label: 'Product' },
   { href: '#workflow', label: 'Features' },
   { href: '#security', label: 'Security' },
-  { href: '#local-bridge', label: 'Local bridge' },
 ]
 
 /** The icon-only account affordance — a plain ringed circle, the way the
