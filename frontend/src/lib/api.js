@@ -1,4 +1,9 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const configuredBase = import.meta.env.VITE_API_URL?.trim() || ''
+const BASE = configuredBase
+  ? configuredBase.replace(/\/+$/, '')
+  : import.meta.env.DEV
+    ? 'http://localhost:8000'
+    : ''
 
 export class ApiError extends Error {
   constructor(message, status, detail) {
@@ -16,6 +21,14 @@ export class ApiError extends Error {
  * no token is ever held in JS memory or localStorage.
  */
 export async function request(path, { method = 'GET', body, signal, headers } = {}) {
+  if (!BASE) {
+    throw new ApiError(
+      'Outpath API is not configured. Set VITE_API_URL to your FastAPI backend.',
+      0,
+      { code: 'api_url_missing' },
+    )
+  }
+
   let res
   try {
     res = await fetch(`${BASE}${path}`, {
@@ -55,7 +68,9 @@ export async function request(path, { method = 'GET', body, signal, headers } = 
           ? detail.message
           : Array.isArray(detail)
             ? detail.map((d) => d.msg || d).join(', ')
-            : `Request failed with ${res.status}`
+            : res.status === 404
+              ? 'Outpath API endpoint was not found. Check VITE_API_URL and confirm the latest backend is deployed.'
+              : `Request failed with ${res.status}`
     throw new ApiError(message, res.status, detail)
   }
   return data

@@ -16,15 +16,26 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
 
 
+def _session_cookie_options() -> dict:
+    # Vercel frontend + Render API are cross-site in production. The session
+    # cookie therefore needs SameSite=None + Secure so credentialed fetches
+    # can carry the Outpath session. Local localhost development can safely
+    # stay on Lax.
+    production = settings.environment != "development"
+    return {
+        "secure": production,
+        "samesite": "none" if production else "lax",
+        "httponly": True,
+        "path": "/",
+    }
+
+
 def _set_session_cookie(response: Response, user_id: uuid.UUID) -> None:
     response.set_cookie(
         settings.session_cookie_name,
         issue_session_token(user_id),
         max_age=settings.session_max_age_seconds,
-        httponly=True,
-        secure=settings.environment != "development",
-        samesite="lax",
-        path="/",
+        **_session_cookie_options(),
     )
 
 
@@ -59,7 +70,14 @@ async def login(request: Request, payload: LoginIn, response: Response, db: Asyn
 
 @router.post("/logout")
 async def logout(response: Response):
-    response.delete_cookie(settings.session_cookie_name, path="/")
+    options = _session_cookie_options()
+    response.delete_cookie(
+        settings.session_cookie_name,
+        path=options["path"],
+        secure=options["secure"],
+        httponly=options["httponly"],
+        samesite=options["samesite"],
+    )
     response.status_code = status.HTTP_204_NO_CONTENT
     return response
 

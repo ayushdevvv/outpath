@@ -33,7 +33,8 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(
     async (email, password) => {
       try {
-        const me = await api.post('/api/auth/login', { email, password })
+        await api.post('/api/auth/login', { email, password })
+        const me = await api.get('/api/auth/me')
         setUser(me)
         setStatus('authed')
         toast.success(`Welcome back, ${me.name?.split(' ')[0] || 'there'}.`)
@@ -49,7 +50,8 @@ export function AuthProvider({ children }) {
   const signUp = useCallback(
     async (name, email, password) => {
       try {
-        const me = await api.post('/api/auth/register', { name, email, password })
+        await api.post('/api/auth/register', { name, email, password })
+        const me = await api.get('/api/auth/me')
         setUser(me)
         setStatus('authed')
         toast.success('Account created — welcome to Outpath.')
@@ -65,7 +67,8 @@ export function AuthProvider({ children }) {
   const signInWithGoogleCredential = useCallback(
     async (credential) => {
       try {
-        const me = await api.post('/api/auth/google/verify', { credential })
+        await api.post('/api/auth/google/verify', { credential })
+        const me = await api.get('/api/auth/me')
         setUser(me)
         setStatus('authed')
         toast.success(`Welcome, ${me.name?.split(' ')[0] || 'there'}.`)

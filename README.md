@@ -45,3 +45,11 @@ For the local bridge, set `VITE_BRIDGE_EXTENSION_ID=06612ea2ea284ec39bd19ef5fbf1
 ## Google Sign-In (React popup)
 Outpath uses Google Identity Services in explicit popup mode. Configure only `VITE_GOOGLE_CLIENT_ID` in the frontend and add the deployed frontend origin (for example `https://outpath.vercel.app`) under **Authorized JavaScript origins** in Google Cloud. Do not configure a redirect URI for this flow. The React callback receives the Google ID token and sends it to `/api/auth/google/verify` for session establishment.
 
+
+
+## Deployment notes
+
+- Render backend: Python 3.13.5 (`backend/.python-version`), `asyncpg` 0.31, and SQLAlchemy asyncio extras are pinned for deployment.
+- Production browser sessions use secure `SameSite=None` cookies because the Vercel frontend and Render API are different sites. `credentials: include` is enabled on frontend API calls.
+- Set `VITE_API_URL` on Vercel to the deployed FastAPI URL and `ALLOWED_ORIGINS` on Render to the exact Vercel origin as a JSON array.
+- Google sign-in uses Google Identity Services popup mode in React. The backend only verifies the returned ID token and creates the existing session; no Google client secret or redirect URI is required for this flow.
