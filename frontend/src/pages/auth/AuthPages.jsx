@@ -57,15 +57,30 @@ function GoogleButton({ onCredential, label = 'Continue with Google' }) {
 
   useEffect(() => {
     let cancelled = false
+    let cleanup = null
     if (!ref.current) return undefined
+    setError('')
+    setReady(false)
+
     renderGoogleButton(ref.current, (credential) => {
-      if (!cancelled) onCredential(credential)
+      if (cancelled) return undefined
+      return onCredential(credential).catch((err) => {
+        if (!cancelled) setError(err.message || 'Google sign in failed.')
+      })
     })
-      .then(() => !cancelled && setReady(true))
+      .then((release) => {
+        cleanup = release
+        if (!cancelled) setReady(true)
+        else cleanup?.()
+      })
       .catch((err) => {
         if (!cancelled) setError(err.message)
       })
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+      cleanup?.()
+    }
   }, [onCredential])
 
   return (

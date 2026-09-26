@@ -1,4 +1,6 @@
 let scriptPromise
+let initializedClientId = ''
+let activeCredentialHandler = null
 
 export function getGoogleClientId() {
   return import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
@@ -30,31 +32,45 @@ function loadGoogleScript() {
   return scriptPromise
 }
 
-export async function renderGoogleButton(element, onCredential) {
-  const clientId = getGoogleClientId()
-  if (!clientId) throw new Error('Google sign-in is not configured. Add VITE_GOOGLE_CLIENT_ID.')
-  const google = await loadGoogleScript()
-  if (!google?.accounts?.id) throw new Error('Google sign-in is unavailable.')
+async function ensureInitialized(google, clientId) {
+  if (initializedClientId === clientId) return
 
-  // Keep the classic Google account chooser popup for the button.
-  // The deprecated `use_fedcm_for_prompt` flag is intentionally not used.
-  // One Tap is also requested separately below when Google/browser policy
-  // says the prompt is eligible to appear.
-  const handleCredential = (response) => {
-    if (response?.credential) onCredential(response.credential)
-  }
-
+  // Google documents initialize() as a page-level configuration call and
+  // recommends invoking it only once. Keep the callback stable and route the
+  // latest credential to the currently mounted button/page.
   google.accounts.id.initialize({
     client_id: clientId,
     ux_mode: 'popup',
     context: 'signin',
     auto_select: false,
     use_fedcm_for_button: false,
-    callback: handleCredential,
     cancel_on_tap_outside: true,
+    callback: (response) => {
+      const credential = response?.credential
+      const handler = activeCredentialHandler
+      if (!credential || !handler) return
+      try {
+        const result = handler(credential)
+        if (result && typeof result.catch === 'function') result.catch(() => {})
+      } catch {
+        // The page-level handler is responsible for showing the user-facing
+        // error. Never leave an async GSI callback as an uncaught rejection.
+      }
+    },
   })
 
   google.accounts.id.disableAutoSelect?.()
+  initializedClientId = clientId
+}
+
+export async function renderGoogleButton(element, onCredential) {
+  const clientId = getGoogleClientId()
+  if (!clientId) throw new Error('Google sign-in is not configured. Add VITE_GOOGLE_CLIENT_ID.')
+  const google = await loadGoogleScript()
+  if (!google?.accounts?.id) throw new Error('Google sign-in is unavailable.')
+
+  activeCredentialHandler = onCredential
+  await ensureInitialized(google, clientId)
 
   element.innerHTML = ''
   google.accounts.id.renderButton(element, {
@@ -67,12 +83,13 @@ export async function renderGoogleButton(element, onCredential) {
     logo_alignment: 'left',
   })
 
-  // Restore the classic One Tap prompt as an additional sign-in surface.
-  // Google may suppress it because of session state, user settings, browser
-  // policy, or prior dismissal; the normal popup button remains available.
-  if (typeof google.accounts.id.prompt === 'function') {
-    window.setTimeout(() => {
-      google.accounts.id.prompt()
-    }, 250)
+  // Intentionally do NOT call google.accounts.id.prompt() here.
+  // The requested classic Google account-chooser popup is the button's
+  // `ux_mode: popup` flow. Calling prompt() additionally starts One Tap/FedCM,
+  // which is what produced the AbortError in the browser log.
+  return () => {
+    if (activeCredentialHandler === onCredential) activeCredentialHandler = null
+    try { google.accounts.id.cancel?.() } catch {}
+    if (element) element.innerHTML = ''
   }
 }

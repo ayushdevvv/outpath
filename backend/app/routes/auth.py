@@ -2,7 +2,7 @@ import uuid
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -186,18 +186,48 @@ async def google_verify(
         # inserted always satisfies this immediate re-read.
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Could not create your account. Please try again.")
 
-    # 3) Link this Google identity to that user, same no-conflict-possible
-    # pattern. If another request already linked it (to this same user, or
-    # even raced us here), we simply don't insert a duplicate row.
-    if account is None:
-        insert_account = (
-            pg_insert(OAuthAccount)
-            .values(id=uuid.uuid4(), user_id=user.id, provider="google", provider_account_id=google_id)
-            .on_conflict_do_nothing(constraint="uq_oauth_identity")
+    # 3) Link this Google identity. Serialize callbacks for the same Google
+    # identity so two One-Click/popup callbacks cannot create duplicate rows.
+    # The advisory lock also makes this path safe on an older production DB
+    # where the unique constraint has not yet been repaired.
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"outpath:google:{google_id}"},
+    )
+
+    account = await db.scalar(
+        select(OAuthAccount).where(
+            OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
         )
-        await db.execute(insert_account)
+    )
+
+    if account is None:
+        # The transaction-level advisory lock serializes callbacks for this
+        # Google identity, so the insert itself does not need ON CONFLICT.
+        # This deliberately avoids making login depend on the name of a
+        # production constraint while an older database is being repaired by
+        # the startup migration.
+        db.add(
+            OAuthAccount(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                provider="google",
+                provider_account_id=google_id,
+            )
+        )
+        await db.flush()
+        account = await db.scalar(
+            select(OAuthAccount).where(
+                OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
+            )
+        )
+
+    if account is not None and account.user_id != user.id:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "This Google account is already linked to another Outpath account.",
+        )
 
     await db.commit()
-    await db.refresh(user)
     token = _create_session(response, user.id)
     return {"user": user, "session_token": token}
