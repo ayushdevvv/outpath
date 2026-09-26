@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { api, ApiError } from './api'
+import { api, ApiError, clearStoredSessionToken, setStoredSessionToken } from './api'
 import { useToast } from './toast'
 
 const AuthContext = createContext(null)
@@ -21,6 +21,9 @@ export function AuthProvider({ children }) {
         setUser(null)
         return
       }
+      if (err instanceof ApiError && err.status === 401) {
+        clearStoredSessionToken()
+      }
       setUser(null)
       setStatus('anon')
     }
@@ -33,7 +36,9 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(
     async (email, password) => {
       try {
-        const me = await api.post('/api/auth/login', { email, password })
+        const session = await api.post('/api/auth/login', { email, password })
+        setStoredSessionToken(session.session_token)
+        const me = session.user
         setUser(me)
         setStatus('authed')
         toast.success(`Welcome back, ${me.name?.split(' ')[0] || 'there'}.`)
@@ -49,7 +54,9 @@ export function AuthProvider({ children }) {
   const signUp = useCallback(
     async (name, email, password) => {
       try {
-        const me = await api.post('/api/auth/register', { name, email, password })
+        const session = await api.post('/api/auth/register', { name, email, password })
+        setStoredSessionToken(session.session_token)
+        const me = session.user
         setUser(me)
         setStatus('authed')
         toast.success('Account created — welcome to Outpath.')
@@ -65,7 +72,9 @@ export function AuthProvider({ children }) {
   const signInWithGoogleCredential = useCallback(
     async (credential) => {
       try {
-        const me = await api.post('/api/auth/google/verify', { credential })
+        const session = await api.post('/api/auth/google/verify', { credential })
+        setStoredSessionToken(session.session_token)
+        const me = session.user
         setUser(me)
         setStatus('authed')
         toast.success(`Welcome, ${me.name?.split(' ')[0] || 'there'}.`)
@@ -85,6 +94,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       toast.error("Couldn't reach the server to sign out", { description: err.message })
     } finally {
+      clearStoredSessionToken()
       setUser(null)
       setStatus('anon')
     }

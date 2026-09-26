@@ -1,9 +1,28 @@
 const configuredBase = import.meta.env.VITE_API_URL?.trim() || ''
-const BASE = configuredBase
-  ? configuredBase.replace(/\/+$/, '')
-  : import.meta.env.DEV
-    ? 'http://localhost:8000'
-    : ''
+const sameOriginInProduction = import.meta.env.PROD && import.meta.env.VITE_API_SAME_ORIGIN !== 'false'
+const SESSION_STORAGE_KEY = 'outpath_session_token'
+
+export const getStoredSessionToken = () => {
+  try { return localStorage.getItem(SESSION_STORAGE_KEY) || '' } catch { return '' }
+}
+
+export const setStoredSessionToken = (token) => {
+  try {
+    if (token) localStorage.setItem(SESSION_STORAGE_KEY, token)
+  } catch {}
+}
+
+export const clearStoredSessionToken = () => {
+  try { localStorage.removeItem(SESSION_STORAGE_KEY) } catch {}
+}
+
+const BASE = sameOriginInProduction
+  ? ''
+  : configuredBase
+    ? configuredBase.replace(/\/+$/, '')
+    : import.meta.env.DEV
+      ? 'http://localhost:8000'
+      : ''
 
 export class ApiError extends Error {
   constructor(message, status, detail) {
@@ -17,11 +36,12 @@ export class ApiError extends Error {
 
 /**
  * Single entry point for every backend call.
- * Sessions live in an httpOnly cookie, so credentials are always included and
- * no token is ever held in JS memory or localStorage.
+ * Production Vercel traffic uses the same-origin /api rewrite and an httpOnly
+ * cookie. A signed bearer fallback is also attached when available so auth does
+ * not depend on cross-site cookie delivery.
  */
 export async function request(path, { method = 'GET', body, signal, headers } = {}) {
-  if (!BASE) {
+  if (!sameOriginInProduction && !BASE) {
     throw new ApiError(
       'Outpath API is not configured. Set VITE_API_URL to your FastAPI backend.',
       0,
@@ -31,6 +51,7 @@ export async function request(path, { method = 'GET', body, signal, headers } = 
 
   let res
   try {
+    const sessionToken = getStoredSessionToken()
     res = await fetch(`${BASE}${path}`, {
       method,
       credentials: 'include',
@@ -38,6 +59,7 @@ export async function request(path, { method = 'GET', body, signal, headers } = 
       headers: {
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : null),
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : null),
         ...headers,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

@@ -24,6 +24,11 @@ class UserOut(BaseModel):
     email: EmailStr
 
 
+class AuthSessionOut(BaseModel):
+    user: UserOut
+    session_token: str
+
+
 class GoogleCredentialIn(BaseModel):
     credential: str = Field(min_length=20, max_length=10000)
 

@@ -67,6 +67,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Set-Cookie"],
 )
 
 
@@ -116,6 +117,40 @@ async def startup() -> None:
 
     async with engine.begin() as conn:
         await conn.execute(text("SELECT 1"))
+        await conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                    IF to_regclass('public.oauth_accounts') IS NOT NULL
+                       AND NOT EXISTS (
+                           SELECT 1
+                           FROM pg_constraint
+                           WHERE conname = 'uq_oauth_identity'
+                             AND conrelid = 'oauth_accounts'::regclass
+                       ) THEN
+                        DELETE FROM oauth_accounts
+                        WHERE ctid IN (
+                            SELECT row_ctid
+                            FROM (
+                                SELECT
+                                    ctid AS row_ctid,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY provider, provider_account_id
+                                        ORDER BY created_at ASC NULLS LAST, id ASC
+                                    ) AS row_number
+                                FROM oauth_accounts
+                            ) ranked
+                            WHERE row_number > 1
+                        );
+                        ALTER TABLE oauth_accounts
+                        ADD CONSTRAINT uq_oauth_identity
+                        UNIQUE (provider, provider_account_id);
+                    END IF;
+                END $$;
+                """
+            )
+        )
 
 
 def _run_alembic(*args: str, timeout: int = 60) -> subprocess.CompletedProcess:

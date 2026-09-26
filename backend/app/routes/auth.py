@@ -4,22 +4,28 @@ from google.oauth2 import id_token as google_id_token
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
 from app.models import OAuthAccount, User
 from app.middleware.rate_limit import limiter
-from app.schemas import GoogleCredentialIn, LoginIn, RegisterIn, UserOut
+from app.schemas import AuthSessionOut, GoogleCredentialIn, LoginIn, RegisterIn, UserOut
 from app.security import get_current_user, hash_password, issue_session_token, verify_password
 
+# A single shared Request object lets google-auth reuse one HTTP connection
+# pool across verifications instead of opening a new one every call.
 _google_auth_request = google_requests.Request()
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
 
 
 def _session_cookie_options() -> dict:
+    # Vercel frontend + Render API are cross-site in production. The session
+    # cookie therefore needs SameSite=None + Secure so credentialed fetches
+    # can carry the Outpath session. Local localhost development can safely
+    # stay on Lax.
     production = settings.environment != "development"
     return {
         "secure": production,
@@ -29,54 +35,44 @@ def _session_cookie_options() -> dict:
     }
 
 
-def _set_session_cookie(response: Response, user_id: uuid.UUID) -> None:
+def _create_session(response: Response, user_id: uuid.UUID) -> str:
+    token = issue_session_token(user_id)
     response.set_cookie(
         settings.session_cookie_name,
-        issue_session_token(user_id),
+        token,
         max_age=settings.session_max_age_seconds,
         **_session_cookie_options(),
     )
+    return token
 
 
-@router.post("/register", response_model=UserOut)
+@router.post("/register", response_model=AuthSessionOut)
 @limiter.limit("5/hour")
 async def register(request: Request, payload: RegisterIn, response: Response, db: AsyncSession = Depends(get_db)):
     email = str(payload.email).strip().lower()
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
-        if existing.password_hash:
-            raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "This email already belongs to a Google account. Continue with Google, then set a password from your account settings.",
-        )
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
 
     user = User(name=payload.name.strip(), email=email, password_hash=hash_password(payload.password))
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    _set_session_cookie(response, user.id)
-    return user
+    token = _create_session(response, user.id)
+    return {"user": user, "session_token": token}
 
 
-@router.post("/login", response_model=UserOut)
+@router.post("/login", response_model=AuthSessionOut)
 @limiter.limit("10/minute")
 async def login(request: Request, payload: LoginIn, response: Response, db: AsyncSession = Depends(get_db)):
     email = str(payload.email).strip().lower()
     user = await db.scalar(select(User).where(User.email == email))
-    if not user:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "No Outpath account was found for that email.")
-    if not user.password_hash:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "This account uses Google sign-in. Continue with Google for this email.",
-        )
-    if not verify_password(payload.password, user.password_hash):
+    if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "That email and password don't match.")
 
-    _set_session_cookie(response, user.id)
-    return user
+    token = _create_session(response, user.id)
+    return {"user": user, "session_token": token}
 
 
 @router.post("/logout")
@@ -100,80 +96,7 @@ async def me(user: User = Depends(get_current_user)):
 
 # --------------------------------------------------------- Google Identity Services
 
-async def _resolve_google_user(db: AsyncSession, google_id: str, email: str, name: str) -> User:
-    """Return the one canonical Outpath user for a verified Google identity.
-
-    The Google `sub` is the stable identity key. Email is only used to connect
-    a first-time Google login to an existing Outpath account. All writes use
-    PostgreSQL upserts so repeated GSI callbacks and concurrent requests are
-    safe and do not turn a successful login into a false 409.
-    """
-    # A previously-linked Google identity always wins. This also repairs the
-    # situation where an old deployment left the identity linked in the DB.
-    account = await db.scalar(
-        select(OAuthAccount).where(
-            OAuthAccount.provider == "google",
-            OAuthAccount.provider_account_id == google_id,
-        )
-    )
-    if account:
-        user = await db.get(User, account.user_id)
-        if user:
-            return user
-
-    # Existing email accounts are linked to the verified Google identity.
-    user = await db.scalar(select(User).where(User.email == email))
-
-    # First-time Google user: create the user. If another callback or a normal
-    # signup creates the same email at the same time, ON CONFLICT simply loses
-    # the race and the canonical row is read back immediately.
-    if user is None:
-        await db.execute(
-            pg_insert(User)
-            .values(id=uuid.uuid4(), name=name, email=email, password_hash=None)
-            .on_conflict_do_nothing(index_elements=["email"])
-        )
-        user = await db.scalar(select(User).where(User.email == email))
-        if user is None:
-            raise HTTPException(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "Could not create your Outpath account. Please try Google sign-in again.",
-            )
-
-    # Link the Google subject. Use column inference rather than the constraint
-    # name so older production schemas with a different generated constraint
-    # name still work.
-    await db.execute(
-        pg_insert(OAuthAccount)
-        .values(
-            id=uuid.uuid4(),
-            user_id=user.id,
-            provider="google",
-            provider_account_id=google_id,
-        )
-        .on_conflict_do_nothing(index_elements=["provider", "provider_account_id"])
-    )
-
-    # IMPORTANT: another callback may have won the insert race. Always read
-    # the row back and use the user it actually points at.
-    account = await db.scalar(
-        select(OAuthAccount).where(
-            OAuthAccount.provider == "google",
-            OAuthAccount.provider_account_id == google_id,
-        )
-    )
-    if account:
-        linked_user = await db.get(User, account.user_id)
-        if linked_user:
-            return linked_user
-
-    raise HTTPException(
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-        "Google account linking did not complete. Please try again.",
-    )
-
-
-@router.post("/google/verify", response_model=UserOut)
+@router.post("/google/verify", response_model=AuthSessionOut)
 @limiter.limit("10/minute")
 async def google_verify(
     request: Request,
@@ -181,19 +104,31 @@ async def google_verify(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
-    """Verify a Google ID token and establish the normal Outpath session."""
+    """
+    React uses Google Identity Services with only the browser client ID.
+    The backend does not run an OAuth redirect/client-secret flow; it only
+    verifies the signed Google ID token and turns it into the existing Outpath
+    session cookie so protected application APIs remain user-scoped.
+
+    The token is verified locally (its signature is checked against Google's
+    published public keys, which google-auth fetches and caches) instead of
+    calling Google's /tokeninfo endpoint. /tokeninfo is explicitly documented
+    by Google as being for debugging only and is aggressively rate-limited —
+    under any real traffic it starts failing intermittently with unrelated
+    502/429s, which is the "different types of errors" this replaces.
+    """
     if not settings.google_client_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured.")
 
     try:
         info = google_id_token.verify_oauth2_token(
-            payload.credential,
-            _google_auth_request,
-            settings.google_client_id,
+            payload.credential, _google_auth_request, settings.google_client_id
         )
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.") from exc
-    except Exception as exc:
+    except ValueError:
+        # Covers every local-verification failure google-auth can raise:
+        # bad signature, expired token, wrong audience/issuer, malformed JWT.
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
+    except Exception as exc:  # network error fetching Google's public keys, etc.
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in could not be verified.") from exc
 
     if str(info.get("email_verified", "")).lower() not in {"true", "1"}:
@@ -206,31 +141,63 @@ async def google_verify(
 
     name = str(info.get("name") or email.split("@")[0] or "Outpath user").strip()[:120]
 
-    try:
-        user = await _resolve_google_user(db, google_id, email, name)
-        await db.commit()
-    except IntegrityError:
-        # Be defensive against legacy schemas / old duplicate data. Never turn
-        # a recoverable identity race into a misleading 409. Roll back and
-        # resolve the already-existing canonical Google row instead.
-        await db.rollback()
-        account = await db.scalar(
-            select(OAuthAccount).where(
-                OAuthAccount.provider == "google",
-                OAuthAccount.provider_account_id == google_id,
-            )
-        )
-        if not account:
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Google sign-in is temporarily unavailable. Please try again.",
-            )
-        user = await db.get(User, account.user_id)
-        if not user:
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Google account data is incomplete. Please try again.",
-            )
+    # --------------------------------------------------------------------
+    # Find-or-create the user, then link this Google identity to them.
+    #
+    # The previous version of this handler did a manual SELECT, then an
+    # INSERT, and caught IntegrityError by hand if two requests landed at
+    # the same time (the Google Identity Services popup can genuinely fire
+    # its callback more than once, and a slow first request plus an
+    # impatient retry from the client both hit this endpoint concurrently).
+    # That hand-rolled recovery path had a gap: if the rollback and re-query
+    # didn't line up perfectly, both requests could come away empty-handed
+    # and the user got a 409 "could not be linked" even though their account
+    # was actually fine. Postgres's own `INSERT ... ON CONFLICT DO NOTHING`
+    # makes the insert itself race-proof — at most one of two concurrent
+    # requests actually inserts a row, the other silently no-ops, and both
+    # then read back the same, single, canonical row. No exceptions, no
+    # rollback bookkeeping, no possibility of a false 409.
 
-    _set_session_cookie(response, user.id)
-    return user
+    # 1) Fast path: this Google identity is already linked to someone.
+    account = await db.scalar(
+        select(OAuthAccount).where(
+            OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
+        )
+    )
+    user = await db.get(User, account.user_id) if account else None
+
+    if user is None:
+        # 2) Find-or-create the user by email. ON CONFLICT DO NOTHING means
+        # a concurrent sign-up with the same email can never raise here —
+        # it just means our insert is the no-op and we read back theirs.
+        user = await db.scalar(select(User).where(User.email == email))
+
+    if user is None:
+        insert_user = (
+            pg_insert(User)
+            .values(id=uuid.uuid4(), name=name, email=email, password_hash=None)
+            .on_conflict_do_nothing(index_elements=["email"])
+        )
+        await db.execute(insert_user)
+        user = await db.scalar(select(User).where(User.email == email))
+
+    if user is None:
+        # Unreachable in practice: the row we (or a concurrent request) just
+        # inserted always satisfies this immediate re-read.
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Could not create your account. Please try again.")
+
+    # 3) Link this Google identity to that user, same no-conflict-possible
+    # pattern. If another request already linked it (to this same user, or
+    # even raced us here), we simply don't insert a duplicate row.
+    if account is None:
+        insert_account = (
+            pg_insert(OAuthAccount)
+            .values(id=uuid.uuid4(), user_id=user.id, provider="google", provider_account_id=google_id)
+            .on_conflict_do_nothing(constraint="uq_oauth_identity")
+        )
+        await db.execute(insert_account)
+
+    await db.commit()
+    await db.refresh(user)
+    token = _create_session(response, user.id)
+    return {"user": user, "session_token": token}
