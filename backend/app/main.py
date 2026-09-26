@@ -40,15 +40,6 @@ async def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
 
 app.add_exception_handler(RateLimitExceeded, rate_limit_error_handler)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "Authorization"],
-)
-
-
 @app.middleware("http")
 async def csrf_origin_guard(request: Request, call_next):
     if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/api/"):
@@ -59,6 +50,24 @@ async def csrf_origin_guard(request: Request, call_next):
                 content={"detail": "Cross-origin request blocked.", "code": "csrf_origin_blocked"},
             )
     return await call_next(request)
+
+
+# IMPORTANT: CORSMiddleware must be added AFTER (i.e. registered last, so it
+# wraps everything as the OUTERMOST layer). Starlette makes the most recently
+# added middleware the outermost one. When CORS was added before the CSRF
+# guard above, the guard's early 403 responses — and any other error that
+# bypasses call_next — never passed back through CORSMiddleware, so the
+# browser never saw an Access-Control-Allow-Origin header on them. That made
+# real, well-formed 403/500 responses show up in the browser as an opaque,
+# unhelpful "Failed to fetch" / CORS error instead of the actual message —
+# the root cause of the inconsistent-looking auth errors.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 
 @app.exception_handler(RequestValidationError)

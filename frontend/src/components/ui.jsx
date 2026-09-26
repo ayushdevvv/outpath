@@ -10,12 +10,11 @@ export function cx(...parts) {
 /* --------------------------------------------------------------- button */
 
 const VARIANTS = {
-  // Every primary action in the product uses the landing page's "Start
-  // testing" recipe: green gradient, lit top edge, glow that blooms on hover.
+  // Every primary action in the product uses the same solid green, flat fill.
   primary:
-    'bg-[linear-gradient(180deg,#3ADB8C_0%,#22C55E_55%,#16A34A_100%)] text-ink font-bold shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
+    'bg-[#22C55E] text-ink font-bold shadow-[0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
   premium:
-    'bg-[linear-gradient(180deg,#3ADB8C_0%,#22C55E_55%,#16A34A_100%)] text-ink font-bold shadow-[0_1px_0_rgba(255,255,255,0.3)_inset,0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
+    'bg-[#22C55E] text-ink font-bold shadow-[0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
   ghost: 'text-muted hover:text-text hover:bg-white/[0.06] disabled:opacity-40',
   outline: 'border border-line2 bg-white/[0.02] text-text shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] hover:border-accent/35 hover:bg-white/[0.045] disabled:opacity-40',
   danger: 'border border-fail/35 text-fail hover:bg-fail/10 disabled:opacity-40',

@@ -1,5 +1,6 @@
 import uuid
-import httpx
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +12,10 @@ from app.models import OAuthAccount, User
 from app.middleware.rate_limit import limiter
 from app.schemas import GoogleCredentialIn, LoginIn, RegisterIn, UserOut
 from app.security import get_current_user, hash_password, issue_session_token, verify_password
+
+# A single shared Request object lets google-auth reuse one HTTP connection
+# pool across verifications instead of opening a new one every call.
+_google_auth_request = google_requests.Request()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
@@ -39,8 +44,8 @@ def _set_session_cookie(response: Response, user_id: uuid.UUID) -> None:
     )
 
 
-@limiter.limit("5/hour")
 @router.post("/register", response_model=UserOut)
+@limiter.limit("5/hour")
 async def register(request: Request, payload: RegisterIn, response: Response, db: AsyncSession = Depends(get_db)):
     email = str(payload.email).strip().lower()
     existing = await db.scalar(select(User).where(User.email == email))
@@ -56,8 +61,8 @@ async def register(request: Request, payload: RegisterIn, response: Response, db
     return user
 
 
-@limiter.limit("10/minute")
 @router.post("/login", response_model=UserOut)
+@limiter.limit("10/minute")
 async def login(request: Request, payload: LoginIn, response: Response, db: AsyncSession = Depends(get_db)):
     email = str(payload.email).strip().lower()
     user = await db.scalar(select(User).where(User.email == email))
@@ -89,8 +94,8 @@ async def me(user: User = Depends(get_current_user)):
 
 # --------------------------------------------------------- Google Identity Services
 
-@limiter.limit("10/minute")
 @router.post("/google/verify", response_model=UserOut)
+@limiter.limit("10/minute")
 async def google_verify(
     request: Request,
     payload: GoogleCredentialIn,
@@ -102,31 +107,27 @@ async def google_verify(
     The backend does not run an OAuth redirect/client-secret flow; it only
     verifies the signed Google ID token and turns it into the existing Outpath
     session cookie so protected application APIs remain user-scoped.
+
+    The token is verified locally (its signature is checked against Google's
+    published public keys, which google-auth fetches and caches) instead of
+    calling Google's /tokeninfo endpoint. /tokeninfo is explicitly documented
+    by Google as being for debugging only and is aggressively rate-limited —
+    under any real traffic it starts failing intermittently with unrelated
+    502/429s, which is the "different types of errors" this replaces.
     """
     if not settings.google_client_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured.")
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        try:
-            token_resp = await client.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": payload.credential},
-            )
-        except httpx.HTTPError as exc:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in could not be verified.") from exc
-
-    if token_resp.status_code != 200:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
-
     try:
-        info = token_resp.json()
-    except ValueError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google returned an invalid identity response.") from exc
-
-    issuer = info.get("iss")
-    audience = info.get("aud")
-    if issuer not in {"https://accounts.google.com", "accounts.google.com"} or audience != settings.google_client_id:
+        info = google_id_token.verify_oauth2_token(
+            payload.credential, _google_auth_request, settings.google_client_id
+        )
+    except ValueError:
+        # Covers every local-verification failure google-auth can raise:
+        # bad signature, expired token, wrong audience/issuer, malformed JWT.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
+    except Exception as exc:  # network error fetching Google's public keys, etc.
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in could not be verified.") from exc
 
     if str(info.get("email_verified", "")).lower() not in {"true", "1"}:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Your Google email is not verified.")

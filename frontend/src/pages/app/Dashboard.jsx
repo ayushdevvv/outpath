@@ -110,8 +110,7 @@ export default function Dashboard() {
         )}
       >
         <div className="flex h-14 items-center gap-2 border-b border-line px-5">
-          <Link to="/" className="flex items-center gap-2.5" aria-label="Outpath home">
-            <span className="ob-word ob-bold text-[17px]"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+          <Link to="/" className="flex w-fit items-center" aria-label="Outpath home">
             <span className="ob-word ob-bold text-[14px]"><span className="ob-o">Out</span><span className="ob-b">box</span></span>
           </Link>
           <button
@@ -186,29 +185,29 @@ export default function Dashboard() {
 
       {/* --------------------------------------------------------------- main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-ink/80 px-4 backdrop-blur-xl sm:px-6">
+        <header className="flex h-14 min-w-0 shrink-0 items-center gap-3 overflow-x-auto border-b border-line bg-ink/80 px-4 backdrop-blur-xl sm:px-6">
           <button
-            className="text-muted transition hover:text-text lg:hidden"
+            className="shrink-0 text-muted transition hover:text-text lg:hidden"
             onClick={() => setNavOpen(true)}
             aria-label="Open navigation"
           >
             <Menu size={18} />
           </button>
 
-          {/* environment switcher */}
-          <div className="relative">
+          {/* environment switcher — shrinks with a truncated name before the row scrolls */}
+          <div className="relative min-w-0 shrink">
             {environments === null && !envError ? (
               <Skeleton className="h-9 w-36" />
             ) : (
               <button
                 onClick={() => setEnvMenu((v) => !v)}
-                className="flex h-9 items-center gap-2 rounded-[10px] border border-line bg-black/30 px-3 text-[12px] text-text transition hover:border-accent/35"
+                className="flex h-9 min-w-0 items-center gap-2 rounded-[10px] border border-line bg-black/30 px-3 text-[12px] text-text transition hover:border-accent/35"
                 aria-haspopup="listbox"
                 aria-expanded={envMenu}
               >
-                <Layers size={13} className="text-muted" />
-                <span className="mono">{activeEnv?.name || 'No environment'}</span>
-                <ChevronDown size={13} className="text-muted" />
+                <Layers size={13} className="shrink-0 text-muted" />
+                <span className="mono max-w-[40vw] truncate sm:max-w-[220px]">{activeEnv?.name || 'No environment'}</span>
+                <ChevronDown size={13} className="shrink-0 text-muted" />
               </button>
             )}
 
@@ -235,12 +234,12 @@ export default function Dashboard() {
           </div>
 
           {envError && (
-            <span className="mono truncate text-[11px] text-fail" title={envError}>
+            <span className="mono min-w-0 max-w-[40vw] shrink truncate text-[11px] text-fail" title={envError}>
               {envError}
             </span>
           )}
 
-          <Button variant="premium" size="sm" className="ml-auto lg:hidden" onClick={newRequest}>
+          <Button variant="premium" size="sm" className="ml-auto shrink-0 lg:hidden" onClick={newRequest}>
             <Plus size={15} strokeWidth={2.5} /> New request
           </Button>
         </header>
