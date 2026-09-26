@@ -1,12 +1,12 @@
 """remove Cloudflare connector storage; rename local history flag
 
-Revision ID: 0005_remove_cloudflare_connectors
+Revision ID: 0005_cf_cleanup
 Revises: 0004_rename_bridge_history_flag
 Create Date: 2026-09-27
 """
 from alembic import op
 
-revision = "0005_remove_cloudflare_connectors"
+revision = "0005_cf_cleanup"
 down_revision = "0004_rename_bridge_history_flag"
 branch_labels = None
 depends_on = None
