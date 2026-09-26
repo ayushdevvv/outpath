@@ -1,0 +1,401 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #05070a;
+  --panel: #0a0f14;
+  --raised: #10161d;
+  --overlay: #0d1319;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.14);
+  --glass: rgba(255, 255, 255, 0.035);
+  --text: #edf2f1;
+  --muted: #8b9a9b;
+  --dim: #5c6b6d;
+  --accent: #22c55e;
+  --accent-soft: #34d399;
+  --pass: #34d399;
+  --fail: #f5657a;
+  --hold: #f2b84b;
+  --accent-deep: #16a34a;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--ink);
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34, 197, 94, 0.055), transparent);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'cv11', 'ss01', 'calt';
+  }
+  /* Keyboard focus stays visible everywhere. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: rgba(34, 197, 94, 0.28);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #171f25;
+    border-radius: 99px;
+    border: 3px solid var(--ink);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #202a31;
+  }
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  /* One surface recipe, three elevations. Radius encodes hierarchy:
+     panels 14px, controls 8-10px, pills 999px. */
+  .surface {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.006)), var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 12px 32px -26px rgba(0, 0, 0, 0.95);
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .surface-hover {
+    cursor: pointer;
+  }
+  .surface-hover:hover {
+    border-color: rgba(34, 197, 94, 0.22);
+    box-shadow: 0 18px 44px -28px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(34, 197, 94, 0.05);
+    transform: translateY(-1px);
+  }
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--line);
+  }
+  .hairline {
+    border-top: 1px solid var(--line);
+  }
+  .display {
+    font-family: Manrope, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+  /* OB / Outbox wordmark. Wide geometric sans, no cursive. First segment
+     neutral, second carries the product green. */
+  .ob-word {
+    font-family: Michroma, Manrope, system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    display: inline-flex;
+    align-items: baseline;
+    white-space: nowrap;
+  }
+  .ob-word .ob-o { color: var(--text); }
+  .ob-word .ob-b { color: var(--accent); }
+  .brand {
+    font-family: Michroma, Manrope, system-ui, sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 0.95;
+  }
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-ligatures: none;
+  }
+  .grid-floor {
+    background-image: linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 80%);
+  }
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.11) 20%,
+      rgba(255, 255, 255, 0.05) 40%
+    );
+    background-size: 800px 100%;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* One confident word carries the same green signal used by the product. */
+  .headline-flare {
+    display: inline-block;
+    background-image: linear-gradient(110deg, var(--accent-deep) 0%, var(--accent) 35%, var(--accent-soft) 52%, var(--accent) 70%, var(--accent-deep) 100%);
+    background-size: 240% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: headline-sweep 7s ease-in-out infinite;
+  }
+
+  /* Feature cards: hover lift + border glow, not a color-swap. Reuses the
+     same easing curve as the rest of the landing page's scroll reveals. */
+  .surface-glow {
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
+      border-color 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
+      box-shadow 0.35s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .surface-glow:hover {
+    transform: translateY(-4px);
+    border-color: rgba(34, 197, 94, 0.35);
+    box-shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(34, 197, 94, 0.16),
+      0 0 28px -8px rgba(34, 197, 94, 0.3);
+  }
+}
+
+@keyframes headline-sweep {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+@layer components {
+  .workspace-shell {
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent 180px), var(--ink);
+  }
+  .workspace-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0.008)), var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 20px 60px -46px rgba(0,0,0,0.95);
+  }
+  .workspace-toolbar {
+    background: rgba(5,7,10,0.62);
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+
+/* ---- premium landing primitives (same green-on-ink theme) ---- */
+@layer components {
+  .ob-bold {
+    font-weight: 700;
+    -webkit-text-stroke: 0.5px currentColor;
+  }
+  .panel-premium {
+    position: relative;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)), var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 40px 80px -50px rgba(0, 0, 0, 0.95),
+      0 0 90px -60px rgba(34, 197, 94, 0.55);
+  }
+  .panel-premium::before,
+  .card-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(52, 211, 153, 0.5), rgba(255, 255, 255, 0.07) 35%, rgba(255, 255, 255, 0.02) 65%, rgba(34, 197, 94, 0.28));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .card-premium {
+    position: relative;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008)), var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 50px -34px rgba(0, 0, 0, 0.9);
+    transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.35s cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  .card-premium::before {
+    opacity: 0.55;
+    transition: opacity 0.35s ease;
+  }
+  .card-premium:hover {
+    transform: translateY(-4px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 30px 56px -30px rgba(0, 0, 0, 0.9),
+      0 0 40px -14px rgba(34, 197, 94, 0.4);
+  }
+  .card-premium:hover::before {
+    opacity: 1;
+  }
+  .stage-premium {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012)), rgba(5, 7, 10, 0.55);
+  }
+  .section-rule {
+    position: absolute;
+    top: 0;
+    left: 1.25rem;
+    right: 1.25rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.35), transparent);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border: 1px solid rgba(34, 197, 94, 0.22);
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.06);
+    color: var(--accent-soft);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .eyebrow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+  .h2-premium {
+    background: linear-gradient(180deg, #ffffff 30%, #9fb0b0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+
+/* ---- in-app premium typography + components ---- */
+@layer components {
+  .font-display {
+    font-weight: 700;
+    letter-spacing: -0.035em;
+  }
+  .label-caps {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .text-gradient-accent {
+    background: linear-gradient(100deg, #34d399 0%, #22c55e 55%, #86efac 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .icon-chip {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(34, 197, 94, 0.28);
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+    color: var(--accent);
+    box-shadow: 0 0 22px -8px rgba(34, 197, 94, 0.5);
+  }
+  .nav-active {
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0.04));
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.25);
+  }
+}
+
+
+/* ---- v4 · in-app premium system (same language as the landing CTA + panels) ---- */
+@layer components {
+  /* The in-app card: deep panel with the landing page's gradient hairline.
+     Static by default; `.app-card-hover` is only for cards that are clickable. */
+  .app-card {
+    position: relative;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008)), var(--panel);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 50px -34px rgba(0, 0, 0, 0.9);
+  }
+  .app-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(52, 211, 153, 0.38), rgba(255, 255, 255, 0.07) 35%, rgba(255, 255, 255, 0.02) 65%, rgba(34, 197, 94, 0.2));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.7;
+    transition: opacity 0.25s ease;
+  }
+  .app-card-hover {
+    cursor: pointer;
+    text-align: left;
+    transition: box-shadow 0.25s ease;
+  }
+  .app-card-hover:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 26px 50px -30px rgba(0, 0, 0, 0.9),
+      0 0 36px -16px rgba(34, 197, 94, 0.45);
+  }
+  .app-card-hover:hover::before {
+    opacity: 1;
+  }
+
+  /* Full-bleed bars that sit flush against the sidebar edge. */
+  .app-toolbar {
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.006)), var(--panel);
+  }
+
+  /* Row hover for lists inside cards. */
+  .app-row {
+    transition: background-color 0.15s ease;
+  }
+  .app-row:hover {
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.07), rgba(34, 197, 94, 0.015));
+  }
+
+  /* Sidebar rail: active item gets a lit edge against the sidebar wall. */
+  .nav-rail {
+    position: absolute;
+    left: -12px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, var(--accent-soft), var(--accent-deep));
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.6);
+  }
+}
