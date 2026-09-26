@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button, Field, Input, cx } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { OAUTH_GOOGLE_URL } from '@/lib/api'
+import { renderGoogleButton } from '@/lib/google'
 
 /** A quiet dot-grid backdrop behind the centered card. */
 function Backdrop() {
@@ -50,19 +50,29 @@ function AuthShell({ title, subtitle, children, footer }) {
   )
 }
 
-function GoogleButton({ label }) {
+function GoogleButton({ onCredential, label = 'Continue with Google' }) {
+  const ref = useRef(null)
+  const [error, setError] = useState('')
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!ref.current) return undefined
+    renderGoogleButton(ref.current, (credential) => {
+      if (!cancelled) onCredential(credential)
+    })
+      .then(() => !cancelled && setReady(true))
+      .catch((err) => {
+        if (!cancelled) setError(err.message)
+      })
+    return () => { cancelled = true }
+  }, [onCredential])
+
   return (
-    <a href={OAUTH_GOOGLE_URL} className="block">
-      <Button variant="outline" className="w-full" type="button">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-          <path fill="#EA4335" d="M12 10.2v3.9h5.5a4.7 4.7 0 0 1-2 3.1v2.6h3.2c1.9-1.7 3-4.3 3-7.3 0-.7-.1-1.4-.2-2H12z" />
-          <path fill="#34A853" d="M12 22c2.7 0 4.9-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.7-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z" />
-          <path fill="#FBBC05" d="M6.4 14a6 6 0 0 1 0-3.8V7.6H3.1a10 10 0 0 0 0 8.9L6.4 14z" />
-          <path fill="#4285F4" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.6l3.3 2.6C7.2 7.7 9.4 5.9 12 5.9z" />
-        </svg>
-        {label}
-      </Button>
-    </a>
+    <div>
+      <div className={ready ? 'rounded-[10px] overflow-hidden bg-white' : 'min-h-11'} ref={ref} aria-label={label} />
+      {error && <p className="mt-2 text-center text-[11px] text-muted">{error}</p>}
+    </div>
   )
 }
 
@@ -79,11 +89,22 @@ function Divider() {
 /* --------------------------------------------------------------- sign in */
 
 export function SignIn() {
-  const { signIn, status } = useAuth()
+  const { signIn, signInWithGoogleCredential, status } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleBusy, setGoogleBusy] = useState(false)
+
+  const handleGoogle = useCallback(async (credential) => {
+    setGoogleBusy(true)
+    try {
+      await signInWithGoogleCredential(credential)
+      navigate('/app', { replace: true })
+    } finally {
+      setGoogleBusy(false)
+    }
+  }, [navigate, signInWithGoogleCredential])
 
   if (status === 'authed') return <Navigate to="/app" replace />
 
@@ -149,7 +170,7 @@ export function SignIn() {
       </form>
 
       <Divider />
-      <GoogleButton label="Continue with Google" />
+      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} /></div>
     </AuthShell>
   )
 }
@@ -157,11 +178,22 @@ export function SignIn() {
 /* --------------------------------------------------------------- sign up */
 
 export function SignUp() {
-  const { signUp, status } = useAuth()
+  const { signUp, signInWithGoogleCredential, status } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [googleBusy, setGoogleBusy] = useState(false)
+
+  const handleGoogle = useCallback(async (credential) => {
+    setGoogleBusy(true)
+    try {
+      await signInWithGoogleCredential(credential)
+      navigate('/app', { replace: true })
+    } finally {
+      setGoogleBusy(false)
+    }
+  }, [navigate, signInWithGoogleCredential])
 
   if (status === 'authed') return <Navigate to="/app" replace />
 
@@ -244,7 +276,7 @@ export function SignUp() {
       </form>
 
       <Divider />
-      <GoogleButton label="Sign up with Google" />
+      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} label="Sign up with Google" /></div>
     </AuthShell>
   )
 }

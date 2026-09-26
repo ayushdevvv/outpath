@@ -6,7 +6,7 @@
  * Outpath origin can reach this worker at all).
  */
 
-const VERSION = '0.2.0'
+const VERSION = '0.3.1'
 const EXECUTE_TIMEOUT_MS = 30000
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 const MAX_REDIRECTS = 5

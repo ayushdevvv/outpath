@@ -62,6 +62,22 @@ export function AuthProvider({ children }) {
     [toast],
   )
 
+  const signInWithGoogleCredential = useCallback(
+    async (credential) => {
+      try {
+        const me = await api.post('/api/auth/google/verify', { credential })
+        setUser(me)
+        setStatus('authed')
+        toast.success(`Welcome, ${me.name?.split(' ')[0] || 'there'}.`)
+        return me
+      } catch (err) {
+        toast.error('Google sign in failed', { description: err.message })
+        throw err
+      }
+    },
+    [toast],
+  )
+
   const signOut = useCallback(async () => {
     try {
       await api.post('/api/auth/logout')
@@ -75,8 +91,8 @@ export function AuthProvider({ children }) {
   }, [toast])
 
   const value = useMemo(
-    () => ({ user, status, signIn, signUp, signOut, reload: load }),
-    [user, status, signIn, signUp, signOut, load],
+    () => ({ user, status, signIn, signUp, signInWithGoogleCredential, signOut, reload: load }),
+    [user, status, signIn, signUp, signInWithGoogleCredential, signOut, load],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

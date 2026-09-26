@@ -17,10 +17,8 @@ class Settings(BaseSettings):
     # CORS: only the web app's own origin(s) may send credentialed requests.
     allowed_origins: list[str] = ["http://localhost:5173"]
 
+    # Google Identity Services client ID used to verify the React-issued ID token.
     google_client_id: str = ""
-    google_client_secret: str = ""
-    google_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
-    frontend_url: str = "http://localhost:5173"
 
     # Outbound request execution limits — see security/ssrf.py.
     request_timeout_seconds: float = 15.0

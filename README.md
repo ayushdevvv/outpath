@@ -34,3 +34,14 @@ ALLOWED_ORIGINS=["http://localhost:5173"]
 ```
 
 Keep real secrets out of source control.
+
+
+## Google sign-in
+
+Google sign-in now uses Google Identity Services in React. There is no Google client secret or redirect URI in Outpath. Set only `VITE_GOOGLE_CLIENT_ID` in the frontend and set the same client ID as `google_client_id` in the FastAPI environment so the backend can verify the signed ID token and issue the existing Outpath session cookie. The backend does not need a Google client secret or OAuth redirect URI.
+
+For the local bridge, set `VITE_BRIDGE_EXTENSION_ID=06612ea2ea284ec39bd19ef5fbf1523630e4fa972d2ffb459d598b845572b3d0` and use the direct Chrome Web Store URL configured in `VITE_EXTENSION_INSTALL_URL`.
+
+## Google Sign-In (React popup)
+Outpath uses Google Identity Services in explicit popup mode. Configure only `VITE_GOOGLE_CLIENT_ID` in the frontend and add the deployed frontend origin (for example `https://outpath.vercel.app`) under **Authorized JavaScript origins** in Google Cloud. Do not configure a redirect URI for this flow. The React callback receives the Google ID token and sends it to `/api/auth/google/verify` for session establishment.
+

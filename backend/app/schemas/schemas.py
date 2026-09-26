@@ -24,6 +24,10 @@ class UserOut(BaseModel):
     email: EmailStr
 
 
+class GoogleCredentialIn(BaseModel):
+    credential: str = Field(min_length=20, max_length=10000)
+
+
 # ------------------------------------------------------------ key/value rows
 
 class KeyValueIn(BaseModel):

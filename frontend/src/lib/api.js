@@ -69,4 +69,4 @@ export const api = {
   del: (p, o) => request(p, { ...o, method: 'DELETE' }),
 }
 
-export const OAUTH_GOOGLE_URL = `${BASE}/api/auth/google/start`
+export const GOOGLE_VERIFY_URL = '/api/auth/google/verify'

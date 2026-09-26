@@ -132,7 +132,8 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
   const [bridgePrompt, setBridgePrompt] = useState(null)
   const abortRef = useRef(null)
 
-  const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || 'https://chromewebstore.google.com/'
+  const extensionId = import.meta.env.VITE_BRIDGE_EXTENSION_ID || '06612ea2ea284ec39bd19ef5fbf1523630e4fa972d2ffb459d598b845572b3d0'
+  const extensionInstallUrl = import.meta.env.VITE_EXTENSION_INSTALL_URL || `https://chromewebstore.google.com/detail/outpath-local-bridge/${extensionId}`
 
   // Collections only exist once saved — the picker only ever needs to
   // offer genuine, saved collections.
@@ -673,15 +674,11 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             <Button
               variant="premium"
               size="sm"
-              onClick={async () => {
-                if (bridgePrompt?.type === 'permission') {
-                  window.open(extensionInstallUrl, '_blank', 'noopener,noreferrer')
-                  return
-                }
+              onClick={() => {
                 if (extensionInstallUrl) window.open(extensionInstallUrl, '_blank', 'noopener,noreferrer')
               }}
             >
-              <ExternalLink size={14} /> {bridgePrompt?.type === 'permission' ? 'Open extension' : 'Get extension'}
+              <ExternalLink size={14} /> {bridgePrompt?.type === 'permission' ? 'Open extension page' : 'Get extension'}
             </Button>
           </>
         }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Outpath Local Bridge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Secure local API bridge for Outpath. Sends requests only to localhost and permitted private development servers.",
   "icons": {
     "16": "icons/icon16.png",
@@ -28,7 +28,8 @@
         "http://localhost:4173/*",
         "http://127.0.0.1:4173/*",
         "https://outpath.app/*",
-        "https://*.outpath.app/*"
+        "https://*.outpath.app/*",
+        "https://outpath.vercel.app/*"
       ],
       "js": [
         "content-script.js"

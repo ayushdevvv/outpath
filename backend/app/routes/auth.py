@@ -1,26 +1,19 @@
-import secrets
 import uuid
-from urllib.parse import urlencode
-
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
 from app.models import OAuthAccount, User
 from app.middleware.rate_limit import limiter
-from app.schemas import LoginIn, RegisterIn, UserOut
+from app.schemas import GoogleCredentialIn, LoginIn, RegisterIn, UserOut
 from app.security import get_current_user, hash_password, issue_session_token, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 settings = get_settings()
-
-GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 
 
 def _set_session_cookie(response: Response, user_id: uuid.UUID) -> None:
@@ -76,92 +69,102 @@ async def me(user: User = Depends(get_current_user)):
     return user
 
 
-# ------------------------------------------------------------- Google OAuth
+# --------------------------------------------------------- Google Identity Services
 
 @limiter.limit("10/minute")
-@router.get("/google/start")
-async def google_start(request: Request):
+@router.post("/google/verify", response_model=UserOut)
+async def google_verify(
+    request: Request,
+    payload: GoogleCredentialIn,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    React uses Google Identity Services with only the browser client ID.
+    The backend does not run an OAuth redirect/client-secret flow; it only
+    verifies the signed Google ID token and turns it into the existing Outpath
+    session cookie so protected application APIs remain user-scoped.
+    """
     if not settings.google_client_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured.")
 
-    state = secrets.token_urlsafe(24)
-    params = {
-        "client_id": settings.google_client_id,
-        "redirect_uri": settings.google_redirect_uri,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "state": state,
-        "access_type": "online",
-        "prompt": "select_account",
-    }
-    query = urlencode(params)
-    resp = RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
-    resp.set_cookie(
-        "outpath_oauth_state",
-        state,
-        max_age=600,
-        httponly=True,
-        secure=settings.environment != "development",
-        samesite="lax",
-        path="/",
-    )
-    return resp
-
-
-@router.get("/google/callback")
-async def google_callback(request: Request, code: str = "", state: str = "", db: AsyncSession = Depends(get_db)):
-    expected_state = request.cookies.get("outpath_oauth_state")
-    if not code or not state or state != expected_state:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid OAuth state.")
-
     async with httpx.AsyncClient(timeout=10) as client:
-        token_resp = await client.post(
-            GOOGLE_TOKEN_URL,
-            data={
-                "code": code,
-                "client_id": settings.google_client_id,
-                "client_secret": settings.google_client_secret,
-                "redirect_uri": settings.google_redirect_uri,
-                "grant_type": "authorization_code",
-            },
-        )
-        if token_resp.status_code != 200:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in failed.")
-        access_token = token_resp.json().get("access_token")
-        if not access_token:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in failed.")
+        try:
+            token_resp = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": payload.credential},
+            )
+        except httpx.HTTPError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in could not be verified.") from exc
 
-        info_resp = await client.get(
-            GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"}
-        )
-        if info_resp.status_code != 200:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in failed.")
-        info = info_resp.json()
+    if token_resp.status_code != 200:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
 
-    google_id = info.get("sub")
-    if not google_id:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google account information is incomplete.")
-    email = (info.get("email") or "").strip().lower() or None
-    name = info.get("name") or (email.split("@")[0] if email else "Outpath user")
+    try:
+        info = token_resp.json()
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google returned an invalid identity response.") from exc
+
+    issuer = info.get("iss")
+    audience = info.get("aud")
+    if issuer not in {"https://accounts.google.com", "accounts.google.com"} or audience != settings.google_client_id:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
+
+    if str(info.get("email_verified", "")).lower() not in {"true", "1"}:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Your Google email is not verified.")
+
+    google_id = str(info.get("sub") or "").strip()
+    email = str(info.get("email") or "").strip().lower()
+    if not google_id or not email:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google account information is incomplete.")
+
+    name = str(info.get("name") or email.split("@")[0] or "Outpath user").strip()[:120]
 
     account = await db.scalar(
         select(OAuthAccount).where(
             OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
         )
     )
-    if account:
-        user = await db.get(User, account.user_id)
-    else:
-        user = await db.scalar(select(User).where(User.email == email)) if email else None
-        if not user:
-            user = User(name=name, email=email or f"{google_id}@google.outpath", password_hash=None)
-            db.add(user)
-            await db.flush()
-        db.add(OAuthAccount(user_id=user.id, provider="google", provider_account_id=google_id))
-        await db.commit()
-        await db.refresh(user)
+    user = await db.get(User, account.user_id) if account else None
 
-    resp = RedirectResponse(f"{settings.frontend_url}/app")
-    resp.delete_cookie("outpath_oauth_state")
-    _set_session_cookie(resp, user.id)
-    return resp
+    if user is None:
+        user = await db.scalar(select(User).where(User.email == email))
+
+    if user is None:
+        # New Google-first account. The unique email constraint protects the
+        # identity boundary; the small retry below handles concurrent sign-in.
+        user = User(name=name, email=email, password_hash=None)
+        db.add(user)
+        try:
+            await db.flush()
+        except IntegrityError:
+            await db.rollback()
+            user = await db.scalar(select(User).where(User.email == email))
+            if user is None:
+                raise HTTPException(status.HTTP_409_CONFLICT, "That Google account is already being created. Please try again.")
+
+    if not account:
+        account = await db.scalar(
+            select(OAuthAccount).where(
+                OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
+            )
+        )
+        if account is None:
+            db.add(OAuthAccount(user_id=user.id, provider="google", provider_account_id=google_id))
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        account = await db.scalar(
+            select(OAuthAccount).where(
+                OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
+            )
+        )
+        user = await db.scalar(select(User).where(User.email == email))
+        if account is None or user is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "This Google account could not be linked. Please try again.")
+
+    await db.refresh(user)
+    _set_session_cookie(response, user.id)
+    return user
