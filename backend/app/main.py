@@ -66,9 +66,30 @@ app.add_middleware(
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Access-Control-Request-Private-Network",
+    ],
     expose_headers=["Set-Cookie"],
 )
+
+
+@app.middleware("http")
+async def local_network_cors(request: Request, call_next):
+    """Allow Chrome's local-network/loopback preflight for trusted Outpath origins.
+
+    Chrome can send Access-Control-Request-Private-Network on an OPTIONS preflight
+    when a public HTTPS page requests a private/loopback target. The local API must
+    explicitly opt in with Access-Control-Allow-Private-Network: true.
+    """
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    requested_private = request.headers.get("access-control-request-private-network")
+    if requested_private == "true" and origin in settings.allowed_origins:
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
 
 
 @app.exception_handler(RequestValidationError)

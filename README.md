@@ -119,3 +119,9 @@ Open the Vite app at `http://localhost:5173`.
 ## Production
 
 The Vercel app uses the `/api/*` rewrite to the Render backend. Google authentication remains on the existing OAuth/session flow.
+
+## Local API testing (Chrome 145+)
+
+Outpath uses browser Local Network Access for local/private requests. For `localhost`/`127.0.0.1`, Chrome 145+ may show the **Apps on device** permission; for private LAN targets such as `192.168.x.x`, it uses **Local Network**. The deployed site must be HTTPS. The target API must allow the Outpath origin through CORS and, when Chrome sends `Access-Control-Request-Private-Network: true`, return `Access-Control-Allow-Private-Network: true`.
+
+If Chrome has already blocked the permission, open the site information icon → **Site settings** and allow the applicable local-device/network permission, then reload Outpath.

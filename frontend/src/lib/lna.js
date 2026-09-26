@@ -32,9 +32,31 @@ export function isLoopbackTarget(url) {
 }
 
 function targetAddressSpace() {
-  // Chrome's LNA Fetch API accepts the local address-space annotation for
-  // both private-network and loopback targets.
+  // Chrome's Fetch API uses this hint to classify the request as local.
+  // Chrome 145+ additionally exposes separate loopback-network/local-network
+  // permissions, but `local` remains the Fetch address-space annotation.
   return 'local'
+}
+
+export async function getLocalNetworkPermission(url) {
+  try {
+    const host = normaliseHost(new URL(url).hostname)
+    const permissionName = isLoopbackHost(host) ? 'loopback-network' : 'local-network'
+    if (!navigator.permissions?.query) return 'unknown'
+    const result = await navigator.permissions.query({ name: permissionName })
+    return result.state
+  } catch {
+    return 'unknown'
+  }
+}
+
+function isLoopbackHost(host) {
+  return LOOPBACK_HOSTS.has(host) || /^127\./.test(host) || /^::1$/i.test(host)
+}
+
+function isPermissionDeniedError(error) {
+  const message = String(error?.message || '')
+  return /permission|denied|blocked|local network|loopback|apps on device/i.test(message)
 }
 
 function buildUrl(baseUrl, params = []) {
@@ -142,10 +164,13 @@ export async function executeLocalRequest(payload, { signal } = {}) {
     })
   } catch (error) {
     if (error?.name === 'AbortError') throw error
+    const permission = await getLocalNetworkPermission(url.toString())
     const message = error?.message || ''
-    if (/cors|failed to fetch|networkerror|load failed/i.test(message)) {
+    if (permission === 'denied' || isPermissionDeniedError(error) || /cors|failed to fetch|networkerror|load failed/i.test(message)) {
+      const isLoopback = isLoopbackHost(host)
+      const permissionLabel = isLoopback ? 'Apps on device' : 'Local Network'
       throw new LocalRequestError(
-        `Browser blocked the local request. Allow Local Network Access in your browser and make sure the target API allows CORS for ${window.location.origin}.`,
+        `Chrome blocked this local request. In Chrome, open the Outpath site settings → allow ${permissionLabel}, then reload. Your local API must also allow CORS from ${window.location.origin} and return Access-Control-Allow-Private-Network: true for the LNA preflight.`,
         'local_access_denied',
       )
     }
