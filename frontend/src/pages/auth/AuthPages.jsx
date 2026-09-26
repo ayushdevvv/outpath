@@ -95,12 +95,16 @@ export function SignIn() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
+  const [googleError, setGoogleError] = useState('')
 
   const handleGoogle = useCallback(async (credential) => {
     setGoogleBusy(true)
+    setGoogleError('')
     try {
       await signInWithGoogleCredential(credential)
       navigate('/app', { replace: true })
+    } catch (err) {
+      setGoogleError(err.message || 'Google sign-in failed. Please try again.')
     } finally {
       setGoogleBusy(false)
     }
@@ -171,6 +175,7 @@ export function SignIn() {
 
       <Divider />
       <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} /></div>
+      {googleError && <p className="mt-2 rounded-lg border border-fail/30 bg-fail/10 px-3 py-2 text-center text-[12px] text-fail">{googleError}</p>}
     </AuthShell>
   )
 }
@@ -184,12 +189,16 @@ export function SignUp() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [googleBusy, setGoogleBusy] = useState(false)
+  const [googleError, setGoogleError] = useState('')
 
   const handleGoogle = useCallback(async (credential) => {
     setGoogleBusy(true)
+    setGoogleError('')
     try {
       await signInWithGoogleCredential(credential)
       navigate('/app', { replace: true })
+    } catch (err) {
+      setGoogleError(err.message || 'Google sign-in failed. Please try again.')
     } finally {
       setGoogleBusy(false)
     }
@@ -277,6 +286,7 @@ export function SignUp() {
 
       <Divider />
       <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} label="Sign up with Google" /></div>
+      {googleError && <p className="mt-2 rounded-lg border border-fail/30 bg-fail/10 px-3 py-2 text-center text-[12px] text-fail">{googleError}</p>}
     </AuthShell>
   )
 }

@@ -43,7 +43,7 @@ export async function renderGoogleButton(element, onCredential) {
     ux_mode: 'popup',
     context: 'signin',
     auto_select: false,
-    use_fedcm_for_prompt: true,
+    use_fedcm_for_button: true,
     callback: (response) => {
       if (response?.credential) onCredential(response.credential)
     },
