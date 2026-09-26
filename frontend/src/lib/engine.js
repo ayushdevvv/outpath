@@ -204,7 +204,7 @@ export function redactSecrets(text, secretValues) {
 
 
 /**
- * Browser-side client for the optional Outbox Local Bridge extension.
+ * Browser-side client for the optional Outpath Local Bridge extension.
  * Communication is isolated to the current page origin and uses one-shot ids
  * so an unrelated window message can never satisfy a request.
  */
@@ -225,7 +225,7 @@ function bridgeMessage(type, payload, { timeoutMs = 1500 } = {}) {
     }
     const timer = window.setTimeout(() => {
       finish()
-      const error = new Error('The Outbox Local Bridge is not available on this page.')
+      const error = new Error('The Outpath Local Bridge is not available on this page.')
       error.code = 'bridge_unavailable'
       reject(error)
     }, timeoutMs)
@@ -233,7 +233,7 @@ function bridgeMessage(type, payload, { timeoutMs = 1500 } = {}) {
     const onMessage = (event) => {
       if (event.source !== window || event.origin !== window.location.origin) return
       const data = event.data
-      if (!data || data.source !== 'outbox-bridge' || data.id !== requestId) return
+      if (!data || data.source !== 'outpath-bridge' || data.id !== requestId) return
       finish()
       if (data.type === 'RESULT' || data.type === 'PONG') {
         resolve(data.payload)
@@ -245,7 +245,7 @@ function bridgeMessage(type, payload, { timeoutMs = 1500 } = {}) {
     }
 
     window.addEventListener('message', onMessage)
-    window.postMessage({ source: 'outbox-app', type, id: requestId, payload }, window.location.origin)
+    window.postMessage({ source: 'outpath-app', type, id: requestId, payload }, window.location.origin)
   })
 }
 

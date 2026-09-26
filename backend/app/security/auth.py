@@ -10,7 +10,7 @@ settings = get_settings()
 # Argon2id: the current OWASP-recommended default, memory-hard against GPU cracking.
 _pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-_serializer = URLSafeTimedSerializer(settings.secret_key, salt="outbox-session")
+_serializer = URLSafeTimedSerializer(settings.secret_key, salt="outpath-session")
 
 
 def hash_password(raw: str) -> str:

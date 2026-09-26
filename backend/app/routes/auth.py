@@ -97,7 +97,7 @@ async def google_start(request: Request):
     query = urlencode(params)
     resp = RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
     resp.set_cookie(
-        "outbox_oauth_state",
+        "outpath_oauth_state",
         state,
         max_age=600,
         httponly=True,
@@ -110,7 +110,7 @@ async def google_start(request: Request):
 
 @router.get("/google/callback")
 async def google_callback(request: Request, code: str = "", state: str = "", db: AsyncSession = Depends(get_db)):
-    expected_state = request.cookies.get("outbox_oauth_state")
+    expected_state = request.cookies.get("outpath_oauth_state")
     if not code or not state or state != expected_state:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid OAuth state.")
 
@@ -142,7 +142,7 @@ async def google_callback(request: Request, code: str = "", state: str = "", db:
     if not google_id:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google account information is incomplete.")
     email = (info.get("email") or "").strip().lower() or None
-    name = info.get("name") or (email.split("@")[0] if email else "Outbox user")
+    name = info.get("name") or (email.split("@")[0] if email else "Outpath user")
 
     account = await db.scalar(
         select(OAuthAccount).where(
@@ -154,7 +154,7 @@ async def google_callback(request: Request, code: str = "", state: str = "", db:
     else:
         user = await db.scalar(select(User).where(User.email == email)) if email else None
         if not user:
-            user = User(name=name, email=email or f"{google_id}@google.outbox", password_hash=None)
+            user = User(name=name, email=email or f"{google_id}@google.outpath", password_hash=None)
             db.add(user)
             await db.flush()
         db.add(OAuthAccount(user_id=user.id, provider="google", provider_account_id=google_id))
@@ -162,6 +162,6 @@ async def google_callback(request: Request, code: str = "", state: str = "", db:
         await db.refresh(user)
 
     resp = RedirectResponse(f"{settings.frontend_url}/app")
-    resp.delete_cookie("outbox_oauth_state")
+    resp.delete_cookie("outpath_oauth_state")
     _set_session_cookie(resp, user.id)
     return resp

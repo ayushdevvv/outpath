@@ -136,7 +136,7 @@ async def execute(request: Request, payload: ExecuteIn, user: User = Depends(get
 
     """
     Executes a request the browser could not send directly (cross-origin,
-    or the user wants Outbox's measured timing/history). Local and private
+    or the user wants Outpath's measured timing/history). Local and private
     targets are rejected here by design — see services/execution.py — and
     must go through the browser extension's local bridge instead.
     """

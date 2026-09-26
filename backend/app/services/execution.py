@@ -1,7 +1,7 @@
 """
 Executes one outbound HTTP request on the user's behalf.
 
-This is the one place Outbox's server calls out to the internet, so every
+This is the one place Outpath's server calls out to the internet, so every
 constraint from the security brief lives here:
   - the URL is validated against private/internal ranges before connecting
   - redirects are not followed automatically (a redirect to a private

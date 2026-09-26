@@ -718,7 +718,7 @@ export function HistoryPanel({ onOpen }) {
 
 export function SettingsPanel() {
   return (
-    <PanelFrame title="Settings" subtitle="What Outbox stores about you, and how requests are sent.">
+    <PanelFrame title="Settings" subtitle="What Outpath stores about you, and how requests are sent.">
       <div className="grid gap-4 lg:grid-cols-2">
         <Card padding="p-6">
           <span className="icon-chip">
@@ -726,8 +726,8 @@ export function SettingsPanel() {
           </span>
           <p className="mt-5 text-[15px] font-semibold text-text">Request execution</p>
           <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
-            A request is sent either through Outbox's controlled server execution path or, for local/private
-            targets, through the Outbox Local Bridge on your machine. Server requests are validated before
+            A request is sent either through Outpath's controlled server execution path or, for local/private
+            targets, through the Outpath Local Bridge on your machine. Server requests are validated before
             connection and redirects are re-checked per hop.
           </p>
         </Card>
@@ -736,7 +736,7 @@ export function SettingsPanel() {
           <span className="icon-chip">
             <ShieldCheck size={18} strokeWidth={1.75} />
           </span>
-          <p className="mt-5 text-[15px] font-semibold text-text">What Outbox stores</p>
+          <p className="mt-5 text-[15px] font-semibold text-text">What Outpath stores</p>
           <ul className="mt-3 space-y-2.5 text-[13.5px] leading-relaxed text-muted">
             <li>Saved requests, collections and environments, scoped to your account.</li>
             <li>History entries: method, URL, status and duration.</li>

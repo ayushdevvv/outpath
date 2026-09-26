@@ -110,7 +110,7 @@ export default function Dashboard() {
         )}
       >
         <div className="flex h-14 items-center gap-2 border-b border-line px-5">
-          <Link to="/" className="flex items-center gap-2.5" aria-label="Outbox home">
+          <Link to="/" className="flex items-center gap-2.5" aria-label="Outpath home">
             <span className="ob-word ob-bold text-[17px]"><span className="ob-o">O</span><span className="ob-b">B</span></span>
             <span className="ob-word ob-bold text-[14px]"><span className="ob-o">Out</span><span className="ob-b">box</span></span>
           </Link>

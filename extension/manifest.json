@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Outbox Local Bridge",
+  "name": "Outpath Local Bridge",
   "version": "0.3.0",
-  "description": "Secure local API bridge for Outbox. Sends requests only to localhost and permitted private development servers.",
+  "description": "Secure local API bridge for Outpath. Sends requests only to localhost and permitted private development servers.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -27,8 +27,8 @@
         "http://127.0.0.1:5173/*",
         "http://localhost:4173/*",
         "http://127.0.0.1:4173/*",
-        "https://outbox.app/*",
-        "https://*.outbox.app/*"
+        "https://outpath.app/*",
+        "https://*.outpath.app/*"
       ],
       "js": [
         "content-script.js"

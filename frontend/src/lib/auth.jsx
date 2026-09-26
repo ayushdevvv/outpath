@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         const me = await api.post('/api/auth/register', { name, email, password })
         setUser(me)
         setStatus('authed')
-        toast.success('Account created — welcome to Outbox.')
+        toast.success('Account created — welcome to Outpath.')
         return me
       } catch (err) {
         toast.error('Sign up failed', { description: err.message })

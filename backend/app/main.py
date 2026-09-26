@@ -25,7 +25,7 @@ BACKEND_ROOT = Path(__file__).resolve().parent.parent
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-app = FastAPI(title="Outbox API", version="0.1.0", docs_url="/api/docs" if settings.environment == "development" else None)
+app = FastAPI(title="Outpath API", version="0.1.0", docs_url="/api/docs" if settings.environment == "development" else None)
 
 app.state.limiter = limiter
 
@@ -87,20 +87,20 @@ async def http_error_handler(request: Request, exc: FastAPIHTTPException):
 
 @app.exception_handler(Exception)
 async def unhandled_error_handler(request: Request, exc: Exception):
-    logging.getLogger("outbox").exception("Unhandled error on %s %s", request.method, request.url.path)
+    logging.getLogger("outpath").exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(status_code=500, content={"detail": "Something went wrong on our end.", "code": "server_error"})
 
 
 @app.on_event("startup")
 async def startup() -> None:
-    logger = logging.getLogger("outbox")
+    logger = logging.getLogger("outpath")
     if settings.environment != "development" and settings.secret_key == "change-me-in-production":
-        raise RuntimeError("SECRET_KEY must be changed before running Outbox in production.")
+        raise RuntimeError("SECRET_KEY must be changed before running Outpath in production.")
     if settings.auto_migrate:
         result = _run_alembic("upgrade", "head")
         if result.returncode != 0:
             logger.error("Database migration failed:\n%s", result.stderr or result.stdout)
-            raise RuntimeError("Database migration failed. Run 'alembic upgrade head' and restart Outbox.")
+            raise RuntimeError("Database migration failed. Run 'alembic upgrade head' and restart Outpath.")
         logger.info("Database schema is up to date.")
     else:
         logger.info("Automatic migrations disabled; schema must be migrated during deployment.")

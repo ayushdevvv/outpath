@@ -63,7 +63,7 @@ function SceneFallback() {
   return (
     <div className="absolute inset-0 grid place-items-center">
       <div className="flex items-center gap-2 text-muted">
-        <span className="ob-word text-[18px] animate-pulse"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+        <span className="ob-word text-[18px] animate-pulse"><span className="ob-o">O</span><span className="ob-b">P</span></span>
         <span className="mono text-[11px]">Loading flow</span>
       </div>
     </div>
@@ -96,7 +96,7 @@ function Hero() {
           transition={{ duration: 0.8, ease: [0.2, 0.7, 0.3, 1] }}
           className="ob-word select-none text-[clamp(3.6rem,12vw,7.2rem)] leading-[0.72] drop-shadow-[0_0_44px_rgba(34,197,94,0.18)]"
         >
-          <span className="ob-o">OUT</span><span className="ob-b">BOX</span>
+          <span className="ob-o">OUT</span><span className="ob-b">PATH</span>
         </motion.h1>
 
         <motion.p
@@ -105,7 +105,7 @@ function Hero() {
           transition={{ delay: 0.15, duration: 0.7 }}
           className="mx-auto mt-5 max-w-[58ch] text-[13px] leading-relaxed text-muted sm:text-[15px]"
         >
-          Build requests. Route them through <span className="text-text">OB</span>. Inspect every response.
+          Build requests. Route them through <span className="text-text">OP</span>. Inspect every response.
         </motion.p>
 
         {/* ------------------------------------------------------ request flow */}
@@ -138,10 +138,10 @@ function Footer() {
     <footer className="hairline mx-auto max-w-6xl px-5 py-10">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-muted">
-          <span className="ob-word text-[17px] text-text"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+          <span className="ob-word text-[17px] text-text"><span className="ob-o">O</span><span className="ob-b">P</span></span>
         </div>
         <p className="mono text-[11px] text-muted">
-          Requests leave your browser, pass through Outbox, and come back measured.
+          Requests leave your browser, pass through Outpath, and come back measured.
         </p>
       </div>
     </footer>

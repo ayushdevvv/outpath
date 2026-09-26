@@ -1,5 +1,5 @@
 """
-Outbox's server executes requests on behalf of the user, which is exactly the
+Outpath's server executes requests on behalf of the user, which is exactly the
 shape of a server-side request forgery vulnerability if left unchecked. This
 module is the single gate every outbound request must pass through.
 
@@ -73,7 +73,7 @@ def validate_outbound_url(raw_url: str) -> ValidatedTarget:
         # If the host is already a literal IP, this succeeds without a DNS lookup.
         ip = ipaddress.ip_address(host)
         if _is_disallowed_ip(ip):
-            raise SsrfBlocked("This address is private or reserved and cannot be reached from Outbox.")
+            raise SsrfBlocked("This address is private or reserved and cannot be reached from Outpath.")
         resolved_ip = str(ip)
     except ValueError:
         # Hostname — resolve and check every returned address.
@@ -87,7 +87,7 @@ def validate_outbound_url(raw_url: str) -> ValidatedTarget:
             candidate = ipaddress.ip_address(sockaddr[0])
             if _is_disallowed_ip(candidate):
                 raise SsrfBlocked(
-                    "This host resolves to a private or internal address and cannot be reached from Outbox."
+                    "This host resolves to a private or internal address and cannot be reached from Outpath."
                 )
             resolved_ip = resolved_ip or str(candidate)
 

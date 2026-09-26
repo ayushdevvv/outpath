@@ -28,7 +28,7 @@ function NotFound() {
         <p className="font-display text-2xl">That page doesn't exist</p>
         <p className="mt-2 text-sm text-muted">Check the address, or head back to the workspace.</p>
         <a href="/" className="mono mt-6 inline-block text-[12px] text-accent hover:underline">
-          Back to Outbox
+          Back to Outpath
         </a>
       </div>
     </div>

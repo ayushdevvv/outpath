@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, ExternalLink, Plus, Puzzle, RefreshCw, Save, Send, ShieldCheck, Trash2, Wifi } from 'lucide-react'
 import { Badge, Button, Dot, Input, Modal, Select, Tabs, cx } from '@/components/ui'
-import OutboxPipeline, { stagesFromRun } from '@/components/OutboxPipeline'
+import OutpathPipeline, { stagesFromRun } from '@/components/OutpathPipeline'
 import { api } from '@/lib/api'
 import { useToast } from '@/lib/toast'
 import {
@@ -471,7 +471,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
       {/* ------------------------------------------------------- pipeline band */}
       <div className="shrink-0 border-b border-line bg-black/25 px-4 py-3.5 sm:px-6">
-        <OutboxPipeline stages={stages} premium />
+        <OutpathPipeline stages={stages} premium />
       </div>
 
       {/* --------------------------------------------- builder | response split */}
@@ -662,8 +662,8 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
       <Modal
         open={!!bridgePrompt}
         onClose={() => setBridgePrompt(null)}
-        title={bridgePrompt?.type === 'permission' ? 'Allow local network access' : 'Install the Outbox Local Bridge'}
-        description={bridgePrompt?.target ? `Local target detected: ${bridgePrompt.target}` : 'Local APIs never pass through the Outbox server.'}
+        title={bridgePrompt?.type === 'permission' ? 'Allow local network access' : 'Install the Outpath Local Bridge'}
+        description={bridgePrompt?.target ? `Local target detected: ${bridgePrompt.target}` : 'Local APIs never pass through the Outpath server.'}
         size="md"
         footer={
           <>
@@ -692,7 +692,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
               <ShieldCheck className="mt-0.5 shrink-0 text-hold" size={18} />
               <div>
                 <p className="text-sm font-semibold text-text">One-time permission</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Open the Outbox Bridge extension popup and press <span className="mono text-text">Allow local access</span>. Then return here and press Send again.</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Open the Outpath Bridge extension popup and press <span className="mono text-text">Allow local access</span>. Then return here and press Send again.</p>
               </div>
             </div>
             <div className="rounded-xl border border-line bg-black/20 p-3">
@@ -706,11 +706,11 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
               <Puzzle className="mt-0.5 shrink-0 text-accent" size={18} />
               <div>
                 <p className="text-sm font-semibold text-text">Local requests use your browser</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Relay blocks localhost and private network targets on the backend for SSRF safety. The browser extension is the secure local bridge.</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-muted">Outpath blocks localhost and private network targets on the backend for SSRF safety. The browser extension is the secure local bridge.</p>
               </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
-              {[['1', 'Install', 'Add Outbox Bridge to Chrome.'], ['2', 'Reload', 'Reload this Relay tab after installing.'], ['3', 'Send', 'Press Send again to run locally.']].map(([n, title, body]) => (
+              {[['1', 'Install', 'Add Outpath Bridge to Chrome.'], ['2', 'Reload', 'Reload this Outpath tab after installing.'], ['3', 'Send', 'Press Send again to run locally.']].map(([n, title, body]) => (
                 <div key={n} className="rounded-xl border border-line bg-black/20 p-3">
                   <div className="mono grid h-6 w-6 place-items-center rounded-md bg-white/5 text-[10px] text-muted">{n}</div>
                   <p className="mt-2 text-[12px] font-semibold text-text">{title}</p>

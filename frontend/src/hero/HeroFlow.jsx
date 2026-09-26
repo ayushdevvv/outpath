@@ -1,11 +1,20 @@
 import { useEffect, useRef } from 'react'
 
-
+/**
+ * The hero visual is a flat, flowing signal diagram. Three stations —
+ * client, relay, server — joined by braided
+ * light-streaks, the way the reference key art reads: motion carried by
+ * moving light, not by geometry or gradients. Plain 2D canvas, no three.js:
+ * lighter to ship, and easier to make read crisp instead of hazy.
+ */
 
 const SIGNAL = '34, 197, 94'
 const SIGNAL_SOFT = '52, 211, 153'
 const DIM = '86, 105, 108'
 
+// One flowing lane: a base sine wave, offset in phase/amplitude, drawn as
+// short moving dashes rather than a filled gradient stroke — the streaks
+// read as discrete light rather than a painted wash.
 function drawLane(ctx, { x0, x1, y, amp, freq, phase, color, alpha, width, dash, t }) {
   ctx.beginPath()
   const steps = 64
@@ -194,7 +203,7 @@ export default function HeroFlow() {
         <span className="mono rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-muted backdrop-blur-sm">Client</span>
       </div>
       <div className="absolute left-1/2 top-[69%] -translate-x-1/2">
-        <span className="mono rounded-full border border-accent/20 bg-accent/[0.06] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-accent backdrop-blur-sm">Outbox relay</span>
+        <span className="mono rounded-full border border-accent/20 bg-accent/[0.06] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-accent backdrop-blur-sm">Outpath relay</span>
       </div>
       <div className="absolute right-[3%] top-[69%] hidden sm:block">
         <span className="mono rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-muted backdrop-blur-sm">API server</span>

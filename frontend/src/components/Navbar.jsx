@@ -106,10 +106,10 @@ export default function Navbar() {
           to the page's own centre (not the midpoint between logo and
           account button), account control pinned right. */}
       <nav className="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-5 sm:px-8 lg:px-12">
-        <Link to="/" className="flex w-fit items-center gap-2.5" aria-label="Outbox home">
-          <span className="ob-word ob-bold text-[20px] sm:text-[17px]"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+        <Link to="/" className="flex w-fit items-center gap-2.5" aria-label="Outpath home">
+          <span className="ob-word ob-bold text-[20px] sm:text-[17px]"><span className="ob-o">O</span><span className="ob-b">P</span></span>
           <span className="ob-word ob-bold hidden text-[16px] sm:inline-flex">
-            <span className="ob-o">Out</span><span className="ob-b">box</span>
+            <span className="ob-o">Out</span><span className="ob-b">path</span>
           </span>
         </Link>
 

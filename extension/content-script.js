@@ -1,12 +1,12 @@
 /**
- * Runs in the page's context on the Outbox web app origin only (see manifest
+ * Runs in the page's context on the Outpath web app origin only (see manifest
  * content_scripts.matches). It never runs on any other site, and it only
  * relays messages tagged with our own protocol — nothing else it sees on
  * the page can reach the background worker.
  */
 
-const APP = 'outbox-app'
-const BRIDGE = 'outbox-bridge'
+const APP = 'outpath-app'
+const BRIDGE = 'outpath-bridge'
 
 window.addEventListener('message', (event) => {
   if (event.source !== window) return

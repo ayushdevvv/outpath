@@ -31,7 +31,7 @@ export async function request(path, { method = 'GET', body, signal, headers } = 
     })
   } catch (err) {
     if (err.name === 'AbortError') throw err
-    throw new ApiError("Can't reach the Outbox API. Check that the backend is running.", 0)
+    throw new ApiError("Can't reach the Outpath API. Check that the backend is running.", 0)
   }
 
   if (res.status === 204) return null

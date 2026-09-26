@@ -55,7 +55,7 @@ async def log_history(
     payload: BridgeHistoryIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """Records a send that was executed by the browser extension's local
-    bridge, which Outbox's server never sees directly (see services/execution.py
+    bridge, which Outpath's server never sees directly (see services/execution.py
     for why localhost requests aren't proxied server-side)."""
     if payload.request_id:
         owned_request = await db.scalar(

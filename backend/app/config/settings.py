@@ -6,12 +6,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # Neon/Postgres. Example:
-    # postgresql+asyncpg://user:pass@ep-xxx.neon.tech/outbox?ssl=require
-    database_url: str = "postgresql+asyncpg://outbox:outbox@localhost:5432/outbox"
+    # postgresql+asyncpg://user:pass@ep-xxx.neon.tech/outpath?ssl=require
+    database_url: str = "postgresql+asyncpg://outpath:outpath@localhost:5432/outpath"
 
     # Session signing — set a long random value in production.
     secret_key: str = "change-me-in-production"
-    session_cookie_name: str = "outbox_session"
+    session_cookie_name: str = "outpath_session"
     session_max_age_seconds: int = 60 * 60 * 24 * 14  # 14 days
 
     # CORS: only the web app's own origin(s) may send credentialed requests.

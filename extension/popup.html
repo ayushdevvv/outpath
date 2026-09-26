@@ -26,9 +26,9 @@
   </head>
   <body>
     <div class="wrap">
-      <div class="brand"><span class="mark">O</span><span>Outbox Bridge</span></div>
+      <div class="brand"><span class="mark">O</span><span>Outpath Bridge</span></div>
       <div class="row" style="margin-top:12px"><span class="dot"></span><span style="font-size:12px">Bridge running</span></div>
-      <p>Allows Outbox to send requests to your own localhost and permitted private development servers.</p>
+      <p>Allows Outpath to send requests to your own localhost and permitted private development servers.</p>
       <div class="status">
         <div class="label">Pending local access</div>
         <div id="pending" class="value">None</div>
@@ -55,7 +55,7 @@
           currentOrigin = response?.payload?.pendingOrigin || null
           pending.textContent = currentOrigin || 'None'
           allow.hidden = !currentOrigin
-          message.textContent = currentOrigin ? 'Allow access here, then return to Outbox and press Send again.' : 'Ready for localhost requests.'
+          message.textContent = currentOrigin ? 'Allow access here, then return to Outpath and press Send again.' : 'Ready for localhost requests.'
           message.className = 'value ' + (currentOrigin ? 'warn' : 'ok')
         })
       }
@@ -67,7 +67,7 @@
           allow.disabled = false
           const result = response?.payload
           if (result?.granted) {
-            message.textContent = 'Access granted. Return to Outbox and press Send again.'
+            message.textContent = 'Access granted. Return to Outpath and press Send again.'
             message.className = 'value ok'
             load()
           } else {

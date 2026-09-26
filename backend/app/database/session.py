@@ -12,7 +12,7 @@ settings = get_settings()
 def normalize_async_database_url(raw_url: str) -> str:
     """Normalize common PostgreSQL URLs for SQLAlchemy's asyncpg driver.
 
-    Outbox uses SQLAlchemy's asyncio extension, so the URL must resolve to
+    Outpath uses SQLAlchemy's asyncio extension, so the URL must resolve to
     ``postgresql+asyncpg``. Provider generated PostgreSQL URLs can also contain
     options meant for libpq/psycopg, notably ``channel_binding`` and
     ``sslmode``. Passing ``channel_binding`` through to asyncpg causes:

@@ -15,7 +15,7 @@ import {
   Variable,
 } from 'lucide-react'
 import { Badge, Button, Dot, cx } from '@/components/ui'
-import OutboxPipeline, { STAGES } from '@/components/OutboxPipeline'
+import OutpathPipeline, { STAGES } from '@/components/OutpathPipeline'
 
 /* ------------------------------------------------------------- primitives */
 
@@ -55,7 +55,7 @@ function Panel({ className, children }) {
 const SCROLL_DETAIL = [
   'POST /api/orders',
   'bearer · {{token}}',
-  'outbox server',
+  'outpath server',
   '201 · 183ms',
   '3/3 passed',
   '201 · 4.2 KB',
@@ -142,7 +142,7 @@ export function PipelineSection() {
         lede="Every request walks the same six stages. When something breaks, the pipeline stops where it broke instead of handing you a red toast and a shrug."
       >
         <Panel className="p-5 md:p-7">
-          <OutboxPipeline stages={stages} premium />
+          <OutpathPipeline stages={stages} premium />
           <div className="mt-8">
             <DatabaseCore scrollYProgress={scrollYProgress} />
           </div>
@@ -329,7 +329,7 @@ const FEATURES = [
   { icon: FolderTree, name: 'Collections', body: 'Group requests into folders that mirror how your service is actually organised.' },
   { icon: Boxes, name: 'Environments', body: 'Local, development and production, each with its own values. Switching changes what gets sent.' },
   { icon: History, name: 'History', body: 'Every send is recorded with its status and duration. Reopen any of them as a live request.' },
-  { icon: Variable, name: 'Variables', body: 'Write {{base_url}} once. Outbox resolves it from the environment at send time.' },
+  { icon: Variable, name: 'Variables', body: 'Write {{base_url}} once. Outpath resolves it from the environment at send time.' },
   { icon: KeyRound, name: 'Authentication', body: 'Bearer tokens, basic auth and API keys, stored per environment rather than pasted per request.' },
   { icon: Check, name: 'Assertions', body: 'Status, field, value and latency checks that turn a response into a pass or a fail.' },
 ]
@@ -368,7 +368,7 @@ export function WorkflowSection() {
 
 const GUARDS = [
   ['Outbound requests are validated', 'Schemes, ports and resolved IPs are checked before a connection opens, so a URL cannot be pointed at internal infrastructure.'],
-  ['Private ranges are refused', 'Loopback, link-local and RFC 1918 addresses never reach the Outbox server — those requests are rejected outright.'],
+  ['Private ranges are refused', 'Loopback, link-local and RFC 1918 addresses never reach the Outpath server — those requests are rejected outright.'],
   ['Every record is owned', 'Collections, environments and history are scoped to your account at the query level, not the view layer.'],
   ['Secrets stay out of logs', 'Tokens, passwords and request bodies are redacted before anything is written down.'],
 ]
@@ -378,14 +378,14 @@ export function SecuritySection() {
     <Section
       id="security"
       eyebrow="06 · Security"
-      title="A outbox, not an open proxy."
-      lede="Outbox makes outbound requests on your behalf, which is exactly the shape of a server-side request forgery bug. These are the constraints that keep it from becoming one."
+      title="An Outpath, not an open proxy."
+      lede="Outpath makes outbound requests on your behalf, which is exactly the shape of a server-side request forgery bug. These are the constraints that keep it from becoming one."
     >
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14">
         <Panel className="flex flex-col justify-center gap-3 p-6">
           {[
             ['Your browser', Boxes],
-            ['Outbox', ShieldCheck],
+            ['Outpath', ShieldCheck],
             ['Target API', FileJson],
           ].map(([label, Icon], i, arr) => (
             <div key={label}>
@@ -442,10 +442,10 @@ export function ClosingSection() {
         <div className="relative px-6 py-20 text-center md:py-28">
           <p className="eyebrow mb-7">
             <span className="eyebrow-dot" />
-            Send · Outbox · Verify
+            Send · Outpath · Verify
           </p>
           <h2 className="display text-[clamp(2.4rem,7vw,4.4rem)]">
-            Send it. Outbox it.
+            Send it. Outpath it.
             <br />
             <span className="headline-flare">Verify</span> it.
           </h2>

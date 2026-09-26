@@ -3,7 +3,7 @@
  * user's own machine, it should only ever forward to local/development
  * targets — it is not meant to become a general-purpose fetch proxy for
  * whatever page happens to talk to it (see content-script.js: only the
- * Outbox origin can reach this worker at all).
+ * Outpath origin can reach this worker at all).
  */
 
 const VERSION = '0.2.0'
@@ -124,7 +124,7 @@ async function execute(payload) {
   }
   if (!(await hasPermission(payload.url))) {
     await markPendingPermission(payload.url)
-    const error = new Error('Local network permission is required. Open the Outbox Bridge popup and allow access for this address.')
+    const error = new Error('Local network permission is required. Open the Outpath Bridge popup and allow access for this address.')
     error.code = 'permission_required'
     throw error
   }
@@ -144,7 +144,7 @@ async function execute(payload) {
       if (!isAllowedTarget(url)) throw new Error('Redirected to an address outside the local/private network allowlist.')
       if (redirect > 0 && !(await hasPermission(url))) {
         await markPendingPermission(url)
-        const error = new Error('The redirected local origin needs permission. Open the Outbox Bridge popup and allow access for this address.')
+        const error = new Error('The redirected local origin needs permission. Open the Outpath Bridge popup and allow access for this address.')
         error.code = 'permission_required'
         throw error
       }
