@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { GoogleLogin } from '@react-oauth/google'
 import { Button, Field, Input, cx } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
-import { renderGoogleButton } from '@/lib/google'
 
 /** A quiet dot-grid backdrop behind the centered card. */
 function Backdrop() {
@@ -50,43 +50,34 @@ function AuthShell({ title, subtitle, children, footer }) {
   )
 }
 
-function GoogleButton({ onCredential, label = 'Continue with Google' }) {
-  const ref = useRef(null)
-  const [error, setError] = useState('')
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    let cleanup = null
-    if (!ref.current) return undefined
-    setError('')
-    setReady(false)
-
-    renderGoogleButton(ref.current, (credential) => {
-      if (cancelled) return undefined
-      return onCredential(credential).catch((err) => {
-        if (!cancelled) setError(err.message || 'Google sign in failed.')
-      })
-    })
-      .then((release) => {
-        cleanup = release
-        if (!cancelled) setReady(true)
-        else cleanup?.()
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.message)
-      })
-
-    return () => {
-      cancelled = true
-      cleanup?.()
-    }
-  }, [onCredential])
-
+function GoogleButton({ onCredential, onError }) {
   return (
-    <div>
-      <div className={ready ? 'rounded-[10px] overflow-hidden bg-white' : 'min-h-11'} ref={ref} aria-label={label} />
-      {error && <p className="mt-2 text-center text-[11px] text-muted">{error}</p>}
+    <div className="overflow-hidden rounded-[10px]">
+      <GoogleLogin
+        onSuccess={(credentialResponse) => {
+          const credential = credentialResponse?.credential
+          if (!credential) {
+            onError?.(new Error('Google did not return a credential.'))
+            return
+          }
+          Promise.resolve(onCredential(credential)).catch((err) => {
+            onError?.(err)
+          })
+        }}
+        onError={() => {
+          onError?.(new Error('Google sign in was cancelled or failed.'))
+        }}
+        theme="outline"
+        type="standard"
+        size="large"
+        text="continue_with"
+        shape="rectangular"
+        logo_alignment="left"
+        width="100%"
+        useOneTap={false}
+        auto_select={false}
+        ux_mode="popup"
+      />
     </div>
   )
 }
@@ -185,7 +176,7 @@ export function SignIn() {
       </form>
 
       <Divider />
-      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} /></div>
+      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} onError={(err) => setError(err.message)} /></div>
     </AuthShell>
   )
 }
@@ -291,7 +282,7 @@ export function SignUp() {
       </form>
 
       <Divider />
-      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} label="Sign up with Google" /></div>
+      <div className={googleBusy ? 'pointer-events-none opacity-60' : ''}><GoogleButton onCredential={handleGoogle} onError={(err) => setError(err.message)} /></div>
     </AuthShell>
   )
 }

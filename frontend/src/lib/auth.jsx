@@ -72,7 +72,7 @@ export function AuthProvider({ children }) {
   const signInWithGoogleCredential = useCallback(
     async (credential) => {
       try {
-        const session = await api.post('/api/auth/google/verify', { credential })
+        const session = await api.post('/api/auth/google', { credential })
         setStoredSessionToken(session.session_token)
         const me = session.user
         setUser(me)

@@ -2,13 +2,13 @@ import uuid
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import OAuthAccount, User
+from app.models import User
 from app.middleware.rate_limit import limiter
 from app.schemas import AuthSessionOut, GoogleCredentialIn, LoginIn, RegisterIn, UserOut
 from app.security import get_current_user, hash_password, issue_session_token, verify_password
@@ -96,7 +96,7 @@ async def me(user: User = Depends(get_current_user)):
 
 # --------------------------------------------------------- Google Identity Services
 
-@router.post("/google/verify", response_model=AuthSessionOut)
+@router.post("/google", response_model=AuthSessionOut)
 @limiter.limit("10/minute")
 async def google_verify(
     request: Request,
@@ -105,129 +105,97 @@ async def google_verify(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    React uses Google Identity Services with only the browser client ID.
-    The backend does not run an OAuth redirect/client-secret flow; it only
-    verifies the signed Google ID token and turns it into the existing Outpath
-    session cookie so protected application APIs remain user-scoped.
+    Cloud-equivalent Google sign-in flow for Outpath:
 
-    The token is verified locally (its signature is checked against Google's
-    published public keys, which google-auth fetches and caches) instead of
-    calling Google's /tokeninfo endpoint. /tokeninfo is explicitly documented
-    by Google as being for debugging only and is aggressively rate-limited —
-    under any real traffic it starts failing intermittently with unrelated
-    502/429s, which is the "different types of errors" this replaces.
+    1. The browser obtains a Google ID token through Google Identity Services.
+    2. FastAPI verifies that signed ID token against Outpath's Web Client ID.
+    3. We identify the Outpath user by normalized email.
+    4. If the email does not exist, create the user as an OAuth-only account.
+    5. Issue the same Outpath session used by normal email/password login.
+
+    We intentionally do not maintain a second Google-linking state machine here.
+    The working Cloud project uses the user's email as the canonical account
+    identity, which also means an existing Outpath email account can continue
+    to use the same account when Google is used later.
     """
     if not settings.google_client_id:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Google sign-in is not configured.",
+        )
 
     try:
         info = google_id_token.verify_oauth2_token(
-            payload.credential, _google_auth_request, settings.google_client_id
+            payload.credential,
+            _google_auth_request,
+            settings.google_client_id,
         )
     except ValueError:
-        # Covers every local-verification failure google-auth can raise:
-        # bad signature, expired token, wrong audience/issuer, malformed JWT.
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in could not be verified.")
-    except Exception as exc:  # network error fetching Google's public keys, etc.
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Google sign-in could not be verified.") from exc
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Google sign-in could not be verified.",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Google sign-in could not be verified right now.",
+        ) from exc
+
+    issuer = str(info.get("iss") or "").strip()
+    if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Google sign-in could not be verified.",
+        )
 
     if str(info.get("email_verified", "")).lower() not in {"true", "1"}:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Your Google email is not verified.")
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Your Google email is not verified.",
+        )
 
-    google_id = str(info.get("sub") or "").strip()
     email = str(info.get("email") or "").strip().lower()
-    if not google_id or not email:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google account information is incomplete.")
+    if not email:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Google account information is incomplete.",
+        )
 
     name = str(info.get("name") or email.split("@")[0] or "Outpath user").strip()[:120]
 
-    # --------------------------------------------------------------------
-    # Find-or-create the user, then link this Google identity to them.
-    #
-    # The previous version of this handler did a manual SELECT, then an
-    # INSERT, and caught IntegrityError by hand if two requests landed at
-    # the same time (the Google Identity Services popup can genuinely fire
-    # its callback more than once, and a slow first request plus an
-    # impatient retry from the client both hit this endpoint concurrently).
-    # That hand-rolled recovery path had a gap: if the rollback and re-query
-    # didn't line up perfectly, both requests could come away empty-handed
-    # and the user got a 409 "could not be linked" even though their account
-    # was actually fine. Postgres's own `INSERT ... ON CONFLICT DO NOTHING`
-    # makes the insert itself race-proof — at most one of two concurrent
-    # requests actually inserts a row, the other silently no-ops, and both
-    # then read back the same, single, canonical row. No exceptions, no
-    # rollback bookkeeping, no possibility of a false 409.
-
-    # 1) Fast path: this Google identity is already linked to someone.
-    account = await db.scalar(
-        select(OAuthAccount).where(
-            OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
-        )
-    )
-    user = await db.get(User, account.user_id) if account else None
+    # Match Cloud's canonical lookup: email is the account key. For first-time
+    # Google sign-in, create a passwordless/OAuth-only User. The unique email
+    # constraint makes this safe for normal single-login use; ON CONFLICT makes
+    # concurrent browser callbacks safe as well.
+    user = await db.scalar(select(User).where(User.email == email))
 
     if user is None:
-        # 2) Find-or-create the user by email. ON CONFLICT DO NOTHING means
-        # a concurrent sign-up with the same email can never raise here —
-        # it just means our insert is the no-op and we read back theirs.
-        user = await db.scalar(select(User).where(User.email == email))
-
-    if user is None:
-        insert_user = (
+        create_user = (
             pg_insert(User)
             .values(id=uuid.uuid4(), name=name, email=email, password_hash=None)
             .on_conflict_do_nothing(index_elements=["email"])
         )
-        await db.execute(insert_user)
+        await db.execute(create_user)
         user = await db.scalar(select(User).where(User.email == email))
 
     if user is None:
-        # Unreachable in practice: the row we (or a concurrent request) just
-        # inserted always satisfies this immediate re-read.
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Could not create your account. Please try again.")
-
-    # 3) Link this Google identity. Serialize callbacks for the same Google
-    # identity so two One-Click/popup callbacks cannot create duplicate rows.
-    # The advisory lock also makes this path safe on an older production DB
-    # where the unique constraint has not yet been repaired.
-    await db.execute(
-        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
-        {"key": f"outpath:google:{google_id}"},
-    )
-
-    account = await db.scalar(
-        select(OAuthAccount).where(
-            OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
-        )
-    )
-
-    if account is None:
-        # The transaction-level advisory lock serializes callbacks for this
-        # Google identity, so the insert itself does not need ON CONFLICT.
-        # This deliberately avoids making login depend on the name of a
-        # production constraint while an older database is being repaired by
-        # the startup migration.
-        db.add(
-            OAuthAccount(
-                id=uuid.uuid4(),
-                user_id=user.id,
-                provider="google",
-                provider_account_id=google_id,
-            )
-        )
-        await db.flush()
-        account = await db.scalar(
-            select(OAuthAccount).where(
-                OAuthAccount.provider == "google", OAuthAccount.provider_account_id == google_id
-            )
-        )
-
-    if account is not None and account.user_id != user.id:
         raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "This Google account is already linked to another Outpath account.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Could not create your account. Please try again.",
         )
 
     await db.commit()
     token = _create_session(response, user.id)
     return {"user": user, "session_token": token}
+
+
+# Backward-compatible alias for browsers still holding an older Outpath bundle.
+@router.post("/google/verify", response_model=AuthSessionOut, include_in_schema=False)
+@limiter.limit("10/minute")
+async def google_verify_legacy(
+    request: Request,
+    payload: GoogleCredentialIn,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    return await google_verify(request, payload, response, db)

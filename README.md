@@ -53,3 +53,7 @@ Outpath uses Google Identity Services in explicit popup mode. Configure only `VI
 - Production browser sessions use secure `SameSite=None` cookies because the Vercel frontend and Render API are different sites. `credentials: include` is enabled on frontend API calls.
 - Set `VITE_API_URL` on Vercel to the deployed FastAPI URL and `ALLOWED_ORIGINS` on Render to the exact Vercel origin as a JSON array.
 - Google sign-in uses Google Identity Services popup mode in React. The backend only verifies the returned ID token and creates the existing session; no Google client secret or redirect URI is required for this flow.
+
+### Google sign-in
+
+Outpath uses the same stable flow as the working Cloud app: `@react-oauth/google` renders the standard Google button in popup mode, the browser sends the signed ID token to `/api/auth/google`, FastAPI verifies it with `GOOGLE_CLIENT_ID`, and the backend issues the normal Outpath session. One Tap is intentionally disabled for this button.
