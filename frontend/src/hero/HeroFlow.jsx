@@ -174,7 +174,7 @@ export default function HeroFlow() {
       >
         <span className="absolute inset-2 rounded-xl border border-accent/10" />
         <span className="relative font-display text-[20px] font-extrabold tracking-[-0.08em] sm:text-[24px]">
-          <span className="text-text">O</span><span className="text-accent">B</span>
+          <span className="text-text">O</span><span className="text-accent">P</span>
         </span>
       </div>
 
@@ -187,14 +187,24 @@ export default function HeroFlow() {
       <div className="absolute right-[3%] top-[69%] hidden sm:block">
         <span className="mono rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-muted backdrop-blur-sm">API server</span>
       </div>
-      <div className="absolute right-[2%] top-[45%] flex w-[100px] flex-col items-center sm:right-[4%] sm:top-[44%] sm:w-[150px]">
-        <span className="mono rounded-full border border-pass/25 bg-pass/10 px-2 py-1 text-[9px] font-semibold tracking-wide text-pass sm:px-2.5 sm:text-[10px]">200 OK</span>
+      <div className="absolute left-[2%] top-[45%] flex w-[96px] flex-col items-center sm:left-[4%] sm:top-[44%] sm:w-[150px]">
+        <span className="mono rounded-full border border-accent/30 bg-accent/[0.08] px-2 py-1 text-[9px] font-semibold tracking-wide text-accent shadow-[0_0_18px_-6px_rgba(34,197,94,0.6)] sm:px-2.5 sm:text-[10px]">GET</span>
         <div className="relative mt-2 h-16 w-px bg-accent/30">
-          <span className="absolute -left-px top-0 h-7 w-px animate-response-fall bg-accent" />
+          <span className="absolute -left-px top-0 h-7 w-px animate-request-rise bg-accent" />
         </div>
-        <div className="mt-2 w-full rounded-xl border border-line bg-ink/88 px-2.5 py-2 text-left shadow-lift sm:px-3 sm:py-2.5">
+        <div className="mt-2 w-full rounded-xl border border-accent/20 bg-gradient-to-b from-ink/95 to-ink/75 px-2.5 py-2 text-left shadow-lift backdrop-blur-sm sm:px-3 sm:py-2.5">
           <p className="mono text-[8px] uppercase tracking-[0.14em] text-muted sm:text-[9px] sm:tracking-[0.16em]">Request 01</p>
-          <p className="mono mt-1 text-[9px] text-text sm:text-[11px]"><span className="text-accent">GET</span> /api/users</p>
+          <p className="mono mt-1 truncate text-[9px] text-text sm:text-[11px]"><span className="text-accent">GET</span> /api/users</p>
+        </div>
+      </div>
+      <div className="absolute right-[2%] top-[45%] flex w-[96px] flex-col items-center sm:right-[4%] sm:top-[44%] sm:w-[150px]">
+        <span className="mono rounded-full border border-pass/30 bg-pass/[0.08] px-2 py-1 text-[9px] font-semibold tracking-wide text-pass shadow-[0_0_18px_-6px_rgba(52,211,153,0.6)] sm:px-2.5 sm:text-[10px]">200 OK</span>
+        <div className="relative mt-2 h-16 w-px bg-pass/30">
+          <span className="absolute -left-px top-0 h-7 w-px animate-response-fall bg-pass" />
+        </div>
+        <div className="mt-2 w-full rounded-xl border border-pass/20 bg-gradient-to-b from-ink/95 to-ink/75 px-2.5 py-2 text-left shadow-lift backdrop-blur-sm sm:px-3 sm:py-2.5">
+          <p className="mono text-[8px] uppercase tracking-[0.14em] text-muted sm:text-[9px] sm:tracking-[0.16em]">Response</p>
+          <p className="mono mt-1 truncate text-[9px] text-text sm:text-[11px]"><span className="text-pass">200</span> · 128ms</p>
         </div>
       </div>
 
@@ -203,6 +213,11 @@ export default function HeroFlow() {
           0% { transform: translateY(0); opacity: 0; }
           18% { opacity: 1; }
           100% { transform: translateY(52px); opacity: 0; }
+        }
+        @keyframes request-rise {
+          0% { transform: translateY(52px); opacity: 0; }
+          18% { opacity: 1; }
+          100% { transform: translateY(0); opacity: 0; }
         }
         @keyframes hero-breathe {
           0%, 100% { transform: translate(-50%, -50%) scale(1); }

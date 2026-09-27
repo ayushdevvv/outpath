@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   Check,
   ChevronRight,
-  Clock,
   Copy,
   FolderTree,
   History as HistoryIcon,
@@ -203,28 +202,50 @@ export function OverviewPanel({ onOpen, onNavigate, onNewRequest }) {
 
       {status === 'ready' && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             {[
-              { label: 'Requests saved', value: view.request_count, target: 'collections', icon: FolderTree, sub: `${view.environment_count} environments` },
-              { label: 'Sends recorded', value: view.history_count, target: 'history', icon: Send, sub: `${view.sends_last_7d ?? 0} in the last 7 days` },
-              { label: 'Success rate', value: view.success_rate == null ? '—' : `${view.success_rate}%`, target: 'history', icon: Check, sub: 'responses 2xx–3xx' },
-              { label: 'Avg latency', value: view.avg_duration_ms == null ? '—' : view.avg_duration_ms, unit: view.avg_duration_ms == null ? '' : 'ms', target: 'history', icon: Clock, sub: 'across all sends' },
+              {
+                icon: FolderTree,
+                target: 'collections',
+                primary: { label: 'Requests saved', value: view.request_count, sub: `${view.environment_count} environments` },
+                secondary: { label: 'Sends', value: view.history_count, sub: `${view.sends_last_7d ?? 0} in last 7d` },
+              },
+              {
+                icon: Check,
+                target: 'history',
+                primary: { label: 'Success rate', value: view.success_rate == null ? '—' : `${view.success_rate}%`, sub: 'responses 2xx–3xx' },
+                secondary: {
+                  label: 'Avg latency',
+                  value: view.avg_duration_ms == null ? '—' : view.avg_duration_ms,
+                  unit: view.avg_duration_ms == null ? '' : 'ms',
+                  sub: 'across all sends',
+                },
+              },
             ].map((s, i) => (
               <button
-                key={s.label}
+                key={s.primary.label}
                 onClick={() => onNavigate(s.target)}
-                className="app-card app-card-hover animate-fade-up p-5"
+                className="app-card app-card-hover animate-fade-up p-5 text-left"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
                 <span className="icon-chip">
                   <s.icon size={18} strokeWidth={1.75} />
                 </span>
-                <p className="mt-5 text-[13px] font-medium text-muted">{s.label}</p>
-                <p className="mt-1.5 flex items-baseline gap-1 text-[32px] font-bold leading-none tracking-tightest text-text">
-                  {s.value}
-                  {s.unit && <span className="text-[14px] font-medium text-muted">{s.unit}</span>}
-                </p>
-                <p className="mono mt-3 text-[11px] text-dim">{s.sub}</p>
+                <div className="mt-5 grid grid-cols-2 gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium text-muted">{s.primary.label}</p>
+                    <p className="mt-1.5 text-[28px] font-bold leading-none tracking-tightest text-text sm:text-[32px]">{s.primary.value}</p>
+                    <p className="mono mt-3 truncate text-[11px] text-dim">{s.primary.sub}</p>
+                  </div>
+                  <div className="min-w-0 border-l border-line pl-4">
+                    <p className="truncate text-[13px] font-medium text-muted">{s.secondary.label}</p>
+                    <p className="mt-1.5 flex items-baseline gap-1 text-[28px] font-bold leading-none tracking-tightest text-text sm:text-[32px]">
+                      {s.secondary.value}
+                      {s.secondary.unit && <span className="text-[13px] font-medium text-muted">{s.secondary.unit}</span>}
+                    </p>
+                    <p className="mono mt-3 truncate text-[11px] text-dim">{s.secondary.sub}</p>
+                  </div>
+                </div>
               </button>
             ))}
           </div>

@@ -35,7 +35,7 @@ function Hero() {
   }, [])
 
   return (
-    <section className="relative overflow-hidden bg-ink pt-44 sm:pt-48 md:pt-56 lg:pt-60">
+    <section className="relative overflow-hidden bg-ink pt-48 sm:pt-52 md:pt-56 lg:pt-60">
       <div className="pointer-events-none absolute inset-0 grid-floor opacity-30" />
 
       <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 text-center sm:px-5">
@@ -57,7 +57,7 @@ function Hero() {
           Build requests. Send them anywhere. Inspect every response.
         </motion.p>
 
-        <div className="relative -mt-1 h-[225px] w-full sm:mt-1 sm:h-[290px] md:h-[330px]">
+        <div className="relative -mt-1 h-[270px] w-full sm:mt-1 sm:h-[300px] md:h-[330px]">
           {mounted ? <HeroFlow /> : <SceneFallback />}
         </div>
 

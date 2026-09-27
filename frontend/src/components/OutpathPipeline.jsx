@@ -32,16 +32,16 @@ function Glyph({ state }) {
 export default function OutpathPipeline({ stages, note, premium = false }) {
   return (
     <div className="w-full">
-      <ol className="flex w-max min-w-full gap-2 overflow-x-auto pb-2 md:w-full md:gap-3">
+      <ol className="grid grid-cols-2 gap-2 sm:flex sm:w-full sm:flex-nowrap sm:gap-3">
         {stages.map((stage, i) => {
           const tone = TONE[stage.state] || TONE.idle
           const next = stages[i + 1]
           return (
-            <li key={stage.id} className="flex min-w-0 flex-1 shrink-0 items-center gap-2 md:gap-3">
+            <li key={stage.id} className="flex min-w-0 items-center gap-2 sm:flex-1 sm:shrink-0 md:gap-3">
               <div
                 className={cx(
-                  'min-w-[7.5rem] flex-1 rounded-xl border px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-all duration-300',
-                  premium ? 'stage-premium py-3.5' : 'bg-black/20 py-2.5',
+                  'min-w-0 flex-1 rounded-xl border px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-all duration-300 sm:min-w-[7.5rem] sm:px-3',
+                  premium ? 'stage-premium py-3' : 'bg-black/20 py-2.5',
                   tone.ring,
                 )}
                 style={premium && tone.glow ? { boxShadow: tone.glow } : undefined}
@@ -49,23 +49,23 @@ export default function OutpathPipeline({ stages, note, premium = false }) {
                 <div className={cx('flex items-center gap-2', tone.text)}>
                   <span
                     className={cx(
-                      'flex h-5 w-5 items-center justify-center rounded-full border bg-black/20',
+                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border bg-black/20',
                       tone.ring,
                     )}
                   >
                     <Glyph state={stage.state} />
                   </span>
-                  <span className="mono truncate text-[11px] font-medium tracking-wide">
+                  <span className="mono truncate text-[10.5px] font-medium tracking-wide sm:text-[11px]">
                     {stage.label}
                   </span>
                 </div>
-                <p className="mono mt-1.5 truncate text-[11px] text-muted" title={stage.detail || ''}>
+                <p className="mono mt-1.5 truncate text-[10.5px] text-muted sm:text-[11px]" title={stage.detail || ''}>
                   {stage.detail || '—'}
                 </p>
               </div>
 
               {next && (
-                <div className="relative h-px w-5 shrink-0 bg-line md:w-8">
+                <div className="relative hidden h-px w-5 shrink-0 bg-line sm:block md:w-8">
                   <motion.span
                     className="absolute inset-y-0 left-0 block"
                     style={{ background: tone.bar }}
