@@ -111,7 +111,7 @@ export default function Dashboard() {
       >
         <div className="flex h-14 items-center gap-2 border-b border-line px-5">
           <Link to="/" className="flex w-fit items-center" aria-label="Outpath home">
-            <span className="ob-word ob-bold text-[14px]"><span className="ob-o">Out</span><span className="ob-b">box</span></span>
+            <span className="ob-word ob-bold text-[14px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
           </Link>
           <button
             className="ml-auto text-muted transition hover:text-text lg:hidden"

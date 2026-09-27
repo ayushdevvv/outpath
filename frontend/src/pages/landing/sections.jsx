@@ -11,6 +11,8 @@ import {
   History,
   KeyRound,
   Lock,
+  Chrome,
+  Globe2,
   ShieldCheck,
   Variable,
 } from 'lucide-react'
@@ -364,6 +366,36 @@ export function WorkflowSection() {
   )
 }
 
+/* ---------------------------------------------------------- local access */
+
+export function LocalAccessSection() {
+  return (
+    <Section
+      id="local"
+      eyebrow="06 · Local APIs"
+      title="Your localhost stays on your machine."
+      lede="Outpath uses browser Local Network Access for local and private targets. The request goes directly from the supported browser to the local API; Outpath does not proxy that localhost traffic."
+    >
+      <div className="grid gap-4 md:grid-cols-[1.2fr_.8fr]">
+        <Panel className="p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-line bg-black/20 px-3 py-2"><Chrome size={15}/><span className="text-[12px] text-text">Chrome 142+</span><span className="mono text-[10px] text-pass">READY</span></div>
+            <div className="flex items-center gap-2 rounded-xl border border-line bg-black/20 px-3 py-2"><Globe2 size={15}/><span className="text-[12px] text-text">Edge 143+</span><span className="mono text-[10px] text-pass">READY</span></div>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {['Secure Outpath origin', 'Browser permission', 'Local API CORS'].map((x) => <div key={x} className="rounded-xl border border-line bg-black/15 p-4"><p className="text-[12px] font-semibold text-text">{x}</p><p className="mt-1 text-[11px] leading-relaxed text-muted">One of the three pieces required for a local request to complete.</p></div>)}
+          </div>
+        </Panel>
+        <Panel className="p-6">
+          <p className="eyebrow mb-4"><span className="eyebrow-dot"/> Browser-only</p>
+          <p className="text-[13px] leading-relaxed text-muted">No extension. No tunnel. No local agent. Public API testing remains available in every normal Outpath environment.</p>
+          <Link to="/docs" className="mt-5 inline-flex text-[12px] font-medium text-accent hover:underline">Read local testing docs <ArrowRight size={13} className="ml-1"/></Link>
+        </Panel>
+      </div>
+    </Section>
+  )
+}
+
 /* ------------------------------------------------------------- 8. security */
 
 const GUARDS = [
@@ -377,7 +409,7 @@ export function SecuritySection() {
   return (
     <Section
       id="security"
-      eyebrow="06 · Security"
+      eyebrow="07 · Security"
       title="An Outpath, not an open proxy."
       lede="Outpath makes outbound requests on your behalf, which is exactly the shape of a server-side request forgery bug. These are the constraints that keep it from becoming one."
     >
@@ -461,8 +493,9 @@ export function ClosingSection() {
               </Button>
             </a>
           </div>
-          <p className="mono mt-7 flex items-center justify-center gap-2 text-[12px] text-muted">
-            <Clock size={12} /> Set up in about a minute
+          <p className="mono mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-muted">
+            <span className="flex items-center gap-2"><Clock size={12} /> Set up in about a minute</span>
+            <span>Local API testing · Chrome 142+ / Edge 143+</span>
           </p>
         </div>
       </div>

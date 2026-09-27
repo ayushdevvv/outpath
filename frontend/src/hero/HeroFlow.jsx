@@ -196,7 +196,7 @@ export default function HeroFlow() {
         }}
       >
         <span className="absolute inset-2 rounded-xl border border-accent/10" />
-        <span className="ob-word relative text-[30px] text-text sm:text-[34px]"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+        <span className="ob-word relative text-[18px] sm:text-[20px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
       </div>
 
       <div className="absolute left-[3%] top-[69%] hidden sm:block">
@@ -208,8 +208,22 @@ export default function HeroFlow() {
       <div className="absolute right-[3%] top-[69%] hidden sm:block">
         <span className="mono rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-muted backdrop-blur-sm">API server</span>
       </div>
+      <div className="absolute right-[8%] top-[47%] hidden w-[110px] flex-col items-center sm:flex">
+        <div className="relative h-20 w-px bg-accent/30">
+          <span className="absolute -left-[1px] top-0 h-8 w-px origin-top animate-response-fall bg-accent" />
+        </div>
+        <div className="mt-2 rounded-xl border border-line bg-ink/85 px-3 py-2 text-left shadow-lift">
+          <p className="mono text-[9px] uppercase tracking-[0.16em] text-muted">Request 01</p>
+          <p className="mono mt-1 text-[10px] text-pass">response received</p>
+        </div>
+      </div>
 
       <style>{`
+        @keyframes response-fall {
+          0% { transform: translateY(0); opacity: 0; }
+          18% { opacity: 1; }
+          100% { transform: translateY(52px); opacity: 0; }
+        }
         @keyframes hero-breathe {
           0%, 100% { transform: translate(-50%, -50%) scale(1); }
           50% { transform: translate(-50%, -50%) scale(1.035); }

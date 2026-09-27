@@ -4,11 +4,12 @@ import { ToastProvider } from './lib/toast'
 import Landing from './pages/landing/Landing'
 import { SignIn, SignUp } from './pages/auth/AuthPages'
 import Dashboard from './pages/app/Dashboard'
+import { ProductPage, FeaturesPage, SecurityPage, DocsPage } from './pages/public/MarketingPages'
 
 function Booting() {
   return (
     <div className="grid h-[100svh] place-items-center bg-ink">
-      <span className="ob-word text-[24px] animate-pulse text-muted"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+      <span className="ob-word text-[17px] animate-pulse"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
     </div>
   )
 }
@@ -43,6 +44,10 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/product" element={<ProductPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/docs" element={<DocsPage />} />
           <Route
             path="/app/*"
             element={

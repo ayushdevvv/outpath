@@ -14,7 +14,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine
 from app.middleware.rate_limit import limiter
-from app.routes import auth, collections, environments, history, requests as requests_routes
+from app.routes import ai, auth, collections, environments, history, requests as requests_routes
 
 settings = get_settings()
 
@@ -66,9 +66,53 @@ app.add_middleware(
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Access-Control-Request-Private-Network",
+    ],
     expose_headers=["Set-Cookie"],
 )
+
+
+@app.middleware("http")
+async def local_network_cors(request: Request, call_next):
+    """Handle browser LNA/CORS directly for trusted Outpath origins.
+
+    This middleware intentionally answers the Private Network Access preflight
+    itself so Starlette/other middleware ordering cannot turn a valid LNA
+    preflight into a generic browser CORS failure.
+    """
+    origin = request.headers.get("origin")
+    is_trusted = origin in settings.allowed_origins
+    requested_private = request.headers.get("access-control-request-private-network")
+
+    if request.method == "OPTIONS" and is_trusted:
+        requested_headers = request.headers.get("access-control-request-headers", "")
+        allow_headers = requested_headers or "Content-Type, Authorization, X-Requested-With"
+        from fastapi.responses import Response
+
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = allow_headers
+        response.headers["Access-Control-Max-Age"] = "600"
+        response.headers["Vary"] = "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+        if requested_private == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+    response = await call_next(request)
+    if is_trusted:
+        response.headers.setdefault("Access-Control-Allow-Origin", origin)
+        response.headers.setdefault("Access-Control-Allow-Credentials", "true")
+        if requested_private == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+        vary = response.headers.get("Vary")
+        response.headers["Vary"] = f"{vary}, Origin" if vary and "Origin" not in vary else (vary or "Origin")
+    return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -177,6 +221,7 @@ async def ready():
 
 
 app.include_router(auth.router)
+app.include_router(ai.router)
 app.include_router(collections.router)
 app.include_router(environments.router)
 app.include_router(requests_routes.router)

@@ -34,7 +34,7 @@ function AuthShell({ title, subtitle, children, footer }) {
         className="surface relative w-full max-w-[400px] p-6 shadow-lift sm:p-8"
       >
         <Link to="/" className="mb-7 flex items-center justify-center gap-2">
-          <span className="ob-word text-[24px]"><span className="ob-o">O</span><span className="ob-b">B</span></span>
+          <span className="ob-word text-[21px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
         </Link>
 
         <div className="text-center">

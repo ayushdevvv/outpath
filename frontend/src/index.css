@@ -34,8 +34,6 @@
   body {
     margin: 0;
     background: var(--ink);
-    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34, 197, 94, 0.055), transparent);
-    background-attachment: fixed;
     color: var(--text);
     font-family: Inter, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -103,7 +101,7 @@
     letter-spacing: -0.045em;
     line-height: 0.95;
   }
-  /* OB / Outpath wordmark. Wide geometric sans, no cursive. First segment
+  /* Outpath wordmark. Wide geometric sans, no cursive. First segment
      neutral, second carries the product green. */
   .ob-word {
     font-family: Michroma, Manrope, system-ui, sans-serif;
@@ -116,6 +114,7 @@
   }
   .ob-word .ob-o { color: var(--text); }
   .ob-word .ob-b { color: var(--accent); }
+  .brand-outpath { font-family: Michroma, Manrope, system-ui, sans-serif; font-weight: 400; letter-spacing: 0.04em; }
   .brand {
     font-family: Michroma, Manrope, system-ui, sans-serif;
     font-weight: 400;
