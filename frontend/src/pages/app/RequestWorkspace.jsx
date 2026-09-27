@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, Bot, Copy, Lightbulb, Plus, Save, Send, Trash2, Wifi } from 'lucide-react'
+import { Copy, Plus, Save, Send, Trash2, Wifi } from 'lucide-react'
 import { Badge, Button, Dot, Input, Select, Tabs, cx } from '@/components/ui'
 import OutpathPipeline, { stagesFromRun } from '@/components/OutpathPipeline'
 import { api } from '@/lib/api'
 import { useToast } from '@/lib/toast'
-import { executeLocalRequest, getLocalBrowserSupport, LocalRequestError } from '@/lib/lna'
+import { executeLocalRequest, LocalRequestError } from '@/lib/lna'
 import {
   ASSERTION_KINDS,
   METHODS,
@@ -128,9 +128,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [localAccessState, setLocalAccessState] = useState('ready')
-  const [aiHint, setAiHint] = useState(null)
-  const [aiLoading, setAiLoading] = useState(false)
-  const localBrowser = useMemo(() => getLocalBrowserSupport(), [])
   const abortRef = useRef(null)
 
 
@@ -158,7 +155,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
   const isDirty = JSON.stringify(req) !== savedFingerprint
 
-  const canSend = req.url.trim().length > 0 && run.phase !== 'sending' && !(isLocalTarget(resolvedUrl.value) && !localBrowser.supported)
+  const canSend = req.url.trim().length > 0 && run.phase !== 'sending'
 
   useEffect(() => {
     if (!isDirty) return undefined
@@ -173,14 +170,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
   /* ---------------------------------------------------------------- send */
 
   const send = useCallback(async () => {
-    const localTarget = isLocalTarget(resolvedUrl.value)
-    if (localTarget && !localBrowser.supported) {
-      const message = 'Localhost testing is available in desktop Chrome 142+ and Edge 144+. Open Outpath there to use local API requests.'
-      setRun({ phase: 'done', request: req, local: true, error: message })
-      toast.warning('Localhost unavailable in this browser', { description: message })
-      return
-    }
-    setAiHint(null)
     const enabled = (rows) => rows.filter((r) => r.enabled !== false && r.key.trim())
 
     const rawPayload = {
@@ -307,29 +296,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
     } finally {
       abortRef.current = null
     }
-  }, [req, vars, activeEnv, toast, onSaved, resolvedUrl, localBrowser])
-
-  const explainErrorWithGroq = async () => {
-    if (aiLoading) return
-    setAiLoading(true)
-    try {
-      const safeBody = run.result?.body || ''
-      const result = await api.post('/api/ai/explain-error', {
-        method: req.method,
-        url: resolvedUrl.value,
-        status: run.result?.status ?? null,
-        status_text: run.result?.statusText || '',
-        error_message: run.error || '',
-        response_body: safeBody.slice(0, 3500),
-        local: !!run.local,
-      })
-      setAiHint(result)
-    } catch (err) {
-      toast.error('AI explanation unavailable', { description: err.message || 'Groq could not explain this response right now.' })
-    } finally {
-      setAiLoading(false)
-    }
-  }
+  }, [req, vars, activeEnv, toast, onSaved])
 
   /* ---------------------------------------------------------------- save */
 
@@ -387,7 +354,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
   const sendTone = statusTone(run.result?.status)
   const local = isLocalTarget(resolvedUrl.value)
-  const quickHint = getQuickErrorHint(run.result?.status, run.result?.statusText, run.local)
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto xl:overflow-hidden">
@@ -466,18 +432,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
               <span className={cx('mono flex shrink-0 items-center gap-1.5 text-[10.5px]', localAccessState === 'error' ? 'text-fail' : 'text-hold')}>
                 <Wifi size={11} />
                 {localAccessState === 'checking' ? 'local network permission' : localAccessState === 'error' ? 'local access blocked' : 'direct local request'}
-              </span>
-            )}
-            {local && (
-              <span
-                title={localBrowser.supported ? `${localBrowser.browser} supports Outpath local requests in this browser.` : 'Use desktop Chrome or Edge for localhost testing.'}
-                className={cx(
-                  'mono flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
-                  localBrowser.supported ? 'border-pass/25 bg-pass/10 text-pass' : 'border-fail/25 bg-fail/10 text-fail',
-                )}
-              >
-                <span className={cx('h-1.5 w-1.5 rounded-full', localBrowser.supported ? 'bg-pass' : 'bg-fail')} />
-                {localBrowser.supported ? `localhost available · ${localBrowser.browser}` : 'localhost · Chrome / Edge only'}
               </span>
             )}
           </div>
@@ -599,19 +553,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             </div>
           )}
 
-          {run.phase === 'done' && (run.error || run.result?.status >= 400) && (
-            <div className="mx-4 mt-4 sm:mx-6">
-              <ErrorAssistCard
-                status={run.result?.status}
-                statusText={run.result?.statusText}
-                quickHint={quickHint}
-                aiHint={aiHint}
-                aiLoading={aiLoading}
-                onExplain={explainErrorWithGroq}
-              />
-            </div>
-          )}
-
           {run.phase === 'done' && run.error && (
             <div className="grid flex-1 place-items-center px-6 py-14 text-center">
               <div>
@@ -687,86 +628,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
         </section>
       </div>
 
-    </div>
-  )
-}
-
-function getQuickErrorHint(status, statusText, local) {
-  if (!status) return local ? 'The browser reached the local-request path, but no HTTP response was received. Check the local service, CORS and browser permission.' : null
-  const hints = {
-    400: 'The server rejected the request as malformed. Check the route, query parameters and JSON/body shape.',
-    401: 'Authentication was rejected. Check the API key, bearer token, session cookie, or whether the token has expired.',
-    403: 'The server understood the request but refused it. Check credentials, scopes, roles, or API permissions.',
-    404: 'The route or resource was not found. Check the base URL, path, API version and resource ID.',
-    405: 'The route exists but does not allow this HTTP method. Try the method the endpoint documents.',
-    409: 'The request conflicts with the current resource state, often because the resource already exists or was changed.',
-    415: 'The server does not accept this representation. Check Content-Type and the request body format.',
-    422: 'The server understood the request but validation failed. Check required fields, types and parameter names.',
-    429: 'The API is rate-limiting you. Slow down requests or check its retry/rate-limit guidance.',
-    500: 'The server hit an internal error. Your request may be valid; inspect the response body and server logs.',
-    502: 'A gateway or upstream service failed while handling the request. Check the upstream dependency and route.',
-    503: 'The service is unavailable or overloaded. Check service health and whether the endpoint is temporarily down.',
-    504: 'A gateway timed out waiting for the upstream service. Check the endpoint latency and upstream health.',
-  }
-  return hints[status] || `${status}${statusText ? ` ${statusText}` : ''}: inspect the response body for the endpoint's specific error contract.`
-}
-
-function ErrorAssistCard({ status, statusText, quickHint, aiHint, aiLoading, onExplain }) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-fail/20 bg-fail/[0.035] shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-fail/10 px-4 py-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-fail/20 bg-fail/10 text-fail">
-            <AlertTriangle size={14} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-[12.5px] font-semibold text-text">Something went wrong</p>
-            <p className="mono mt-0.5 text-[10.5px] text-muted">
-              {status ? `${status}${statusText ? ` · ${statusText}` : ''}` : 'No HTTP response'}
-            </p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={onExplain} busy={aiLoading}>
-          <Bot size={14} /> {aiHint ? 'Refresh explanation' : 'Explain with Groq'}
-        </Button>
-      </div>
-
-      <div className="grid gap-3 p-4 lg:grid-cols-2">
-        {quickHint && (
-          <div className="rounded-xl border border-line bg-black/20 p-3">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-text">
-              <Lightbulb size={13} className="text-hold" /> Likely issue
-            </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-muted">{quickHint}</p>
-          </div>
-        )}
-
-        {aiHint ? (
-          <div className="rounded-xl border border-accent/20 bg-accent/[0.035] p-3">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-text">
-              <Bot size={13} className="text-accent" /> {aiHint.title}
-            </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-muted">{aiHint.summary}</p>
-            <p className="mt-2 text-[11px] text-text">{aiHint.likely_cause}</p>
-            {aiHint.next_steps?.length > 0 && (
-              <ul className="mt-2 space-y-1 text-[11px] leading-relaxed text-muted">
-                {aiHint.next_steps.map((step, index) => (
-                  <li key={`${step}-${index}`} className="flex gap-2">
-                    <span className="mono text-accent">{index + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mt-2 text-[10px] uppercase tracking-[0.14em] text-dim">confidence · {aiHint.confidence}</p>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-line2 bg-black/10 p-3">
-            <p className="text-[11px] font-semibold text-text">Need more context?</p>
-            <p className="mt-1.5 text-[11.5px] leading-relaxed text-muted">Groq can inspect the status, route and safe response snippet and turn it into concrete debugging steps.</p>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
