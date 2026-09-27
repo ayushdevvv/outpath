@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     # Google Identity Services client ID used to verify the React-issued ID token.
     google_client_id: str = ""
 
+    # Optional Outpath error-diagnosis copilot. The key stays server-side.
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_timeout_seconds: float = 12.0
+
     # Outbound request execution limits — see security/ssrf.py.
     request_timeout_seconds: float = 15.0
     max_response_bytes: int = 5 * 1024 * 1024  # 5 MB

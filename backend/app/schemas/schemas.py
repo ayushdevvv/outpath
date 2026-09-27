@@ -163,6 +163,24 @@ class ExecuteIn(BaseModel):
     request_id: uuid.UUID | None = None
 
 
+class ErrorExplainIn(BaseModel):
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
+    url: str = Field(min_length=1, max_length=2000)
+    status: int | None = Field(default=None, ge=100, le=599)
+    status_text: str = Field(default="", max_length=120)
+    error_message: str = Field(default="", max_length=2000)
+    response_body: str = Field(default="", max_length=6000)
+    local: bool = False
+
+
+class ErrorExplainOut(BaseModel):
+    title: str
+    summary: str
+    likely_cause: str
+    next_steps: list[str]
+    confidence: Literal["high", "medium", "low"]
+
+
 class ExecuteOut(BaseModel):
     status: int
     status_text: str

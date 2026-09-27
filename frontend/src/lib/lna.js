@@ -2,6 +2,48 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1'])
 const MAX_LOCAL_RESPONSE_BYTES = 25 * 1024 * 1024
 const LOCAL_SESSION_PREFIX = 'outpath_local_session:'
 
+
+export function getLocalBrowserSupport() {
+  if (typeof navigator === 'undefined') {
+    return { supported: false, browser: 'Unknown', version: 0, mobile: false }
+  }
+
+  const ua = navigator.userAgent || ''
+  const brands = Array.isArray(navigator.userAgentData?.brands)
+    ? navigator.userAgentData.brands.map((item) => item.brand)
+    : []
+  const mobile = navigator.userAgentData?.mobile === true || /Android|iPhone|iPad|iPod/i.test(ua)
+
+  let browser = 'Other'
+  let version = 0
+  let match = null
+
+  const edgeBrand = brands.find((brand) => /Microsoft Edge/i.test(brand))
+  const chromeBrand = brands.find((brand) => /Google Chrome/i.test(brand))
+
+  if (edgeBrand || /Edg\//i.test(ua)) {
+    browser = 'Edge'
+    match = ua.match(/Edg(?:A|iOS)?\/([\d.]+)/i)
+  } else if (chromeBrand || /Chrome\//i.test(ua)) {
+    browser = 'Chrome'
+    match = ua.match(/Chrome\/([\d.]+)/i)
+  }
+
+  version = match ? Number.parseInt(match[1], 10) || 0 : 0
+
+  // Chrome 142 introduced the permission-gated LNA flow. Edge ships the
+  // permission flow in current Chromium releases; keep the product gate on a
+  // conservative current desktop baseline instead of advertising support to
+  // mobile browsers or unknown Chromium shells.
+  const supported = !mobile && ((browser === 'Chrome' && version >= 142) || (browser === 'Edge' && version >= 144))
+
+  return { supported, browser, version, mobile }
+}
+
+export function isLocalBrowserSupported() {
+  return getLocalBrowserSupport().supported
+}
+
 function isLocalDestinationHost(host) {
   if (LOOPBACK_HOSTS.has(host) || host.endsWith('.localhost') || host.endsWith('.local')) return true
   if (/^127\./.test(host) || /^10\./.test(host) || /^169\.254\./.test(host) || /^192\.168\./.test(host)) return true
@@ -145,6 +187,14 @@ async function readTextWithLimit(response) {
 }
 
 export async function executeLocalRequest(payload, { signal } = {}) {
+  const browserSupport = getLocalBrowserSupport()
+  if (!browserSupport.supported) {
+    throw new LocalRequestError(
+      'Localhost testing is available in desktop Chrome 142+ and Edge 143+. Open Outpath there to use local API requests.',
+      'unsupported_browser',
+    )
+  }
+
   if (!window.isSecureContext) {
     throw new LocalRequestError(
       'Local API testing requires an HTTPS Outpath page. Use https://outpath.vercel.app or localhost during development.',

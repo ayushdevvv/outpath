@@ -125,3 +125,7 @@ The Vercel app uses the `/api/*` rewrite to the Render backend. Google authentic
 Outpath uses browser Local Network Access for local/private requests. `localhost`/`127.0.0.1` are sent as the browser `loopback` address space; private LAN destinations are sent as `local`. For `localhost`/`127.0.0.1`, Chrome 145+ may show the **Apps on device** permission; for private LAN targets such as `192.168.x.x`, it uses **Local Network**. The deployed site must be HTTPS. The target API must allow the Outpath origin through CORS and, when Chrome sends `Access-Control-Request-Private-Network: true`, return `Access-Control-Allow-Private-Network: true`.
 
 If Chrome has already blocked the permission, open the site information icon → **Site settings** and allow the applicable local-device/network permission, then reload Outpath.
+
+### AI error hints
+
+Set `GROQ_API_KEY` on the backend to enable the request error diagnosis card. `GROQ_MODEL` defaults to `openai/gpt-oss-120b`.

@@ -14,7 +14,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine
 from app.middleware.rate_limit import limiter
-from app.routes import auth, collections, environments, history, requests as requests_routes
+from app.routes import ai, auth, collections, environments, history, requests as requests_routes
 
 settings = get_settings()
 
@@ -221,6 +221,7 @@ async def ready():
 
 
 app.include_router(auth.router)
+app.include_router(ai.router)
 app.include_router(collections.router)
 app.include_router(environments.router)
 app.include_router(requests_routes.router)
