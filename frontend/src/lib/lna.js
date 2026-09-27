@@ -1,5 +1,6 @@
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1'])
 const MAX_LOCAL_RESPONSE_BYTES = 25 * 1024 * 1024
+const LOCAL_SESSION_PREFIX = 'outpath_local_session:'
 
 function isLocalDestinationHost(host) {
   if (LOOPBACK_HOSTS.has(host) || host.endsWith('.localhost') || host.endsWith('.local')) return true
@@ -55,6 +56,33 @@ export async function getLocalNetworkPermission(url) {
 
 function isLoopbackHost(host) {
   return LOOPBACK_HOSTS.has(host) || /^127\./.test(host) || /^::1$/i.test(host)
+}
+
+function localSessionKey(url) {
+  return `${LOCAL_SESSION_PREFIX}${url.origin}`
+}
+
+function getLocalSessionToken(url) {
+  try { return localStorage.getItem(localSessionKey(url)) || '' } catch { return '' }
+}
+
+function setLocalSessionToken(url, token) {
+  try {
+    if (token) localStorage.setItem(localSessionKey(url), token)
+  } catch {}
+}
+
+function clearLocalSessionToken(url) {
+  try { localStorage.removeItem(localSessionKey(url)) } catch {}
+}
+
+function isLocalAuthPath(url) {
+  const path = url.pathname.replace(/\/+$/, '')
+  return path === '/api/auth/login' || path === '/api/auth/register' || path === '/api/auth/google' || path === '/api/auth/google/verify'
+}
+
+function isLocalLogoutPath(url) {
+  return url.pathname.replace(/\/+$/, '') === '/api/auth/logout'
 }
 
 function isPermissionDeniedError(error) {
@@ -146,6 +174,15 @@ export async function executeLocalRequest(payload, { signal } = {}) {
   }
   applyAuth(headers, url, payload.auth)
 
+  // Local Outpath auth is independent from the production Render session.
+  // After a local /api/auth/login (or register/Google login), keep the returned
+  // signed session token scoped to this exact local origin and automatically
+  // use it for later local protected requests such as /api/environments.
+  if (!Object.keys(headers).some((key) => key.toLowerCase() === 'authorization')) {
+    const localSessionToken = getLocalSessionToken(url)
+    if (localSessionToken) headers.Authorization = `Bearer ${localSessionToken}`
+  }
+
   if (['POST', 'PUT', 'PATCH'].includes(payload.method) && !Object.keys(headers).some((k) => k.toLowerCase() === 'content-type')) {
     headers['Content-Type'] = 'application/json'
   }
@@ -157,7 +194,7 @@ export async function executeLocalRequest(payload, { signal } = {}) {
       method: payload.method,
       headers,
       body: ['GET', 'DELETE'].includes(payload.method) ? undefined : (payload.body || undefined),
-      credentials: 'omit',
+      credentials: 'include',
       mode: 'cors',
       redirect: 'follow',
       signal,
@@ -181,8 +218,21 @@ export async function executeLocalRequest(payload, { signal } = {}) {
   }
 
   const body = await readTextWithLimit(response)
+  if (response.status === 401) clearLocalSessionToken(url)
   const headersOut = {}
   response.headers.forEach((value, key) => { headersOut[key] = value })
+
+  // Persist only the signed Outpath session returned by a local auth endpoint.
+  // The token is intentionally scoped by origin so a credential for
+  // 127.0.0.1:8000 can never be sent to another local service.
+  if (isLocalAuthPath(url)) {
+    try {
+      const parsed = JSON.parse(body)
+      if (parsed?.session_token) setLocalSessionToken(url, parsed.session_token)
+    } catch {}
+  } else if (isLocalLogoutPath(url)) {
+    clearLocalSessionToken(url)
+  }
 
   return {
     status: response.status,
