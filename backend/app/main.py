@@ -87,8 +87,13 @@ async def local_network_cors(request: Request, call_next):
     response = await call_next(request)
     origin = request.headers.get("origin")
     requested_private = request.headers.get("access-control-request-private-network")
-    if requested_private == "true" and origin in settings.allowed_origins:
-        response.headers["Access-Control-Allow-Private-Network"] = "true"
+    if origin in settings.allowed_origins:
+        # Chrome's local-network access flow can use this opt-in on the
+        # preflight response. Adding it whenever the request is from a
+        # trusted Outpath origin is harmless for ordinary requests and avoids
+        # depending on middleware ordering for OPTIONS responses.
+        if request.method == "OPTIONS" or requested_private == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
 
