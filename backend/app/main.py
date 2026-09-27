@@ -78,22 +78,40 @@ app.add_middleware(
 
 @app.middleware("http")
 async def local_network_cors(request: Request, call_next):
-    """Allow Chrome's local-network/loopback preflight for trusted Outpath origins.
+    """Handle browser LNA/CORS directly for trusted Outpath origins.
 
-    Chrome can send Access-Control-Request-Private-Network on an OPTIONS preflight
-    when a public HTTPS page requests a private/loopback target. The local API must
-    explicitly opt in with Access-Control-Allow-Private-Network: true.
+    This middleware intentionally answers the Private Network Access preflight
+    itself so Starlette/other middleware ordering cannot turn a valid LNA
+    preflight into a generic browser CORS failure.
     """
-    response = await call_next(request)
     origin = request.headers.get("origin")
+    is_trusted = origin in settings.allowed_origins
     requested_private = request.headers.get("access-control-request-private-network")
-    if origin in settings.allowed_origins:
-        # Chrome's local-network access flow can use this opt-in on the
-        # preflight response. Adding it whenever the request is from a
-        # trusted Outpath origin is harmless for ordinary requests and avoids
-        # depending on middleware ordering for OPTIONS responses.
-        if request.method == "OPTIONS" or requested_private == "true":
+
+    if request.method == "OPTIONS" and is_trusted:
+        requested_headers = request.headers.get("access-control-request-headers", "")
+        allow_headers = requested_headers or "Content-Type, Authorization, X-Requested-With"
+        from fastapi.responses import Response
+
+        response = Response(status_code=204)
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = allow_headers
+        response.headers["Access-Control-Max-Age"] = "600"
+        response.headers["Vary"] = "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+        if requested_private == "true":
             response.headers["Access-Control-Allow-Private-Network"] = "true"
+        return response
+
+    response = await call_next(request)
+    if is_trusted:
+        response.headers.setdefault("Access-Control-Allow-Origin", origin)
+        response.headers.setdefault("Access-Control-Allow-Credentials", "true")
+        if requested_private == "true":
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+        vary = response.headers.get("Vary")
+        response.headers["Vary"] = f"{vary}, Origin" if vary and "Origin" not in vary else (vary or "Origin")
     return response
 
 

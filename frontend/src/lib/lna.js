@@ -31,11 +31,14 @@ export function isLoopbackTarget(url) {
   }
 }
 
-function targetAddressSpace() {
-  // Chrome's Fetch API uses this hint to classify the request as local.
-  // Chrome 145+ additionally exposes separate loopback-network/local-network
-  // permissions, but `local` remains the Fetch address-space annotation.
-  return 'local'
+function targetAddressSpace(url) {
+  // Chrome 145+ splits localhost/127.0.0.1 into the loopback address space
+  // and private LAN destinations into the local address space. Mark the Fetch
+  // request with the same address space so Chrome can apply the right
+  // permission (Apps on device vs Local Network).
+  let host = ''
+  try { host = normaliseHost(new URL(url).hostname) } catch {}
+  return isLoopbackHost(host) ? 'loopback' : 'local'
 }
 
 export async function getLocalNetworkPermission(url) {
@@ -160,7 +163,7 @@ export async function executeLocalRequest(payload, { signal } = {}) {
       signal,
       // Chrome's Local Network Access implementation uses this hint to classify
       // the intended destination and gate the request behind browser permission.
-      targetAddressSpace: targetAddressSpace(),
+      targetAddressSpace: targetAddressSpace(url.toString()),
     })
   } catch (error) {
     if (error?.name === 'AbortError') throw error
@@ -170,7 +173,7 @@ export async function executeLocalRequest(payload, { signal } = {}) {
       const isLoopback = isLoopbackHost(host)
       const permissionLabel = isLoopback ? 'Apps on device' : 'Local Network'
       throw new LocalRequestError(
-        `Chrome blocked this local request. In Chrome, open the Outpath site settings → allow ${permissionLabel}, then reload. Your local API must also allow CORS from ${window.location.origin} and return Access-Control-Allow-Private-Network: true for the LNA preflight.`,
+        `Chrome blocked this local request. Allow ${permissionLabel} for Outpath in Chrome site settings, then reload. For localhost/127.0.0.1 the permission is Apps on device; for 192.168.x.x/10.x.x.x/private LAN targets it is Local Network. The target API must also allow CORS from ${window.location.origin}.`,
         'local_access_denied',
       )
     }
