@@ -104,35 +104,80 @@ async def overview(user: User = Depends(get_current_user), db: AsyncSession = De
         .order_by(RequestHistory.created_at.desc())
         .limit(8)
     )
-    answered, ok, avg_ms = (
+    answered, ok, avg_ms, fastest_ms, slowest_ms = (
         await db.execute(
             select(
                 func.count(RequestHistory.status),
                 func.count(case((RequestHistory.status.between(200, 399), 1))),
                 func.avg(RequestHistory.duration_ms),
+                func.min(RequestHistory.duration_ms),
+                func.max(RequestHistory.duration_ms),
             ).where(RequestHistory.user_id == user.id)
         )
     ).one()
 
-                                                                                 
+    method_rows = (
+        await db.execute(
+            select(RequestHistory.method, func.count())
+            .where(RequestHistory.user_id == user.id)
+            .group_by(RequestHistory.method)
+            .order_by(func.count().desc())
+        )
+    ).all()
+    method_breakdown = [{"method": m, "count": c} for m, c in method_rows]
+
+    status_cases = {
+        "2xx": RequestHistory.status.between(200, 299),
+        "3xx": RequestHistory.status.between(300, 399),
+        "4xx": RequestHistory.status.between(400, 499),
+        "5xx": RequestHistory.status.between(500, 599),
+    }
+    status_counts = (
+        await db.execute(
+            select(*[func.count(case((cond, 1))) for cond in status_cases.values()]).where(
+                RequestHistory.user_id == user.id
+            )
+        )
+    ).one()
+    failed_count = await db.scalar(
+        select(func.count()).where(RequestHistory.user_id == user.id, RequestHistory.status.is_(None))
+    )
+    status_breakdown = [
+        {"class": label, "count": count} for label, count in zip(status_cases.keys(), status_counts)
+    ]
+    if failed_count:
+        status_breakdown.append({"class": "failed", "count": failed_count})
+    status_breakdown = [row for row in status_breakdown if row["count"]]
+
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     since = today - timedelta(days=6)
-    stamps = await db.scalars(
-        select(RequestHistory.created_at).where(
+    rows = await db.execute(
+        select(RequestHistory.created_at, RequestHistory.duration_ms).where(
             RequestHistory.user_id == user.id, RequestHistory.created_at >= since
         )
     )
     daily = [0] * 7
-    for ts in stamps:
+    daily_ms_sum = [0] * 7
+    daily_ms_n = [0] * 7
+    for ts, dur in rows:
         idx = (ts.astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) - since).days
         if 0 <= idx < 7:
             daily[idx] += 1
+            if dur is not None:
+                daily_ms_sum[idx] += dur
+                daily_ms_n[idx] += 1
+    daily_avg_ms = [round(daily_ms_sum[i] / daily_ms_n[i]) if daily_ms_n[i] else None for i in range(7)]
 
     return OverviewOut(
         success_rate=round(ok * 100 / answered, 1) if answered else None,
         avg_duration_ms=round(avg_ms) if avg_ms is not None else None,
+        fastest_ms=fastest_ms,
+        slowest_ms=slowest_ms,
         sends_last_7d=sum(daily),
         daily_sends=daily,
+        daily_avg_ms=daily_avg_ms,
+        method_breakdown=method_breakdown,
+        status_breakdown=status_breakdown,
         request_count=request_count or 0,
         history_count=history_count or 0,
         environment_count=environment_count or 0,

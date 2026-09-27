@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="#0a0f14"/>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="none" stroke="#1c2b25" stroke-width="2"/>
+  <text x="32" y="42" text-anchor="middle" font-family="Manrope, Inter, system-ui, sans-serif" font-weight="800" font-size="28" letter-spacing="-1">
+    <tspan fill="#edf2f1">O</tspan><tspan fill="#22c55e">P</tspan>
+  </text>
+</svg>

@@ -213,6 +213,18 @@ class HistoryPageOut(BaseModel):
     has_more: bool
 
 
+class MethodBreakdownOut(BaseModel):
+    method: str
+    count: int
+
+
+class StatusBreakdownOut(BaseModel):
+    class_: str = Field(alias="class")
+    count: int
+
+    model_config = {"populate_by_name": True}
+
+
 class OverviewOut(BaseModel):
     request_count: int
     history_count: int
@@ -221,4 +233,9 @@ class OverviewOut(BaseModel):
     avg_duration_ms: int | None = None
     sends_last_7d: int = 0
     daily_sends: list[int] = []
+    daily_avg_ms: list[int | None] = []
+    method_breakdown: list[MethodBreakdownOut] = []
+    status_breakdown: list[StatusBreakdownOut] = []
+    fastest_ms: int | None = None
+    slowest_ms: int | None = None
     recent: list[HistoryOut]

@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Check,
   ChevronRight,
   Copy,
   FolderTree,
+  Gauge,
   History as HistoryIcon,
   Layers,
   Plus,
   Send,
   Server,
   ShieldCheck,
+  Timer,
   Trash2,
+  TrendingUp,
+  Zap,
 } from 'lucide-react'
 import {
   Button,
@@ -27,6 +31,165 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useToast } from '@/lib/toast'
 import { METHOD_TONE, statusTone } from '@/lib/engine'
+
+const METHOD_HEX = {
+  GET: 'var(--pass)',
+  POST: 'var(--accent)',
+  PUT: 'var(--hold)',
+  PATCH: 'var(--hold)',
+  DELETE: 'var(--fail)',
+}
+
+const STATUS_CLASS_META = {
+  '2xx': { label: '2xx · OK', color: 'var(--pass)' },
+  '3xx': { label: '3xx · Redirect', color: 'var(--hold)' },
+  '4xx': { label: '4xx · Client', color: 'var(--fail)' },
+  '5xx': { label: '5xx · Server', color: '#e64980' },
+  failed: { label: 'Failed', color: 'var(--dim)' },
+}
+
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function lastNDayLabels(n) {
+  const out = []
+  const today = new Date()
+  for (let i = n - 1; i >= 0; i -= 1) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    out.push(DAY_LABELS[d.getDay()])
+  }
+  return out
+}
+
+/** Premium dual-metric area chart: request volume as a filled area, avg latency as an overlaid line. */
+function TrafficChart({ daily, dailyAvgMs }) {
+  const w = 640
+  const h = 200
+  const padX = 10
+  const padTop = 16
+  const padBottom = 26
+  const n = daily.length
+  const labels = lastNDayLabels(n)
+  const peak = Math.max(1, ...daily)
+  const msVals = dailyAvgMs.filter((v) => v != null)
+  const msPeak = Math.max(1, ...msVals)
+  const msFloor = msVals.length ? Math.min(...msVals) : 0
+
+  const stepX = n > 1 ? (w - padX * 2) / (n - 1) : 0
+  const yFor = (v) => padTop + (1 - v / peak) * (h - padTop - padBottom)
+  const points = daily.map((v, i) => [padX + i * stepX, yFor(v)])
+
+  const areaPath =
+    points.length > 0
+      ? `M${points[0][0]},${h - padBottom} ` +
+        points.map(([x, y]) => `L${x},${y}`).join(' ') +
+        ` L${points[points.length - 1][0]},${h - padBottom} Z`
+      : ''
+  const linePath = points.length > 0 ? `M${points.map(([x, y]) => `${x},${y}`).join(' L')}` : ''
+
+  const msYFor = (v) => {
+    if (v == null) return null
+    const span = msPeak - msFloor || 1
+    return padTop + (1 - (v - msFloor) / span) * (h - padTop - padBottom) * 0.55 - 4
+  }
+  const msPoints = dailyAvgMs.map((v, i) => (v == null ? null : [padX + i * stepX, msYFor(v)]))
+  const msSegments = []
+  let seg = []
+  msPoints.forEach((p, i) => {
+    if (p) {
+      seg.push(p)
+    } else if (seg.length) {
+      msSegments.push(seg)
+      seg = []
+    }
+    if (i === msPoints.length - 1 && seg.length) msSegments.push(seg)
+  })
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full sm:h-48" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="trafficFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {[0.25, 0.5, 0.75].map((f) => (
+        <line
+          key={f}
+          x1={padX}
+          x2={w - padX}
+          y1={padTop + f * (h - padTop - padBottom)}
+          y2={padTop + f * (h - padTop - padBottom)}
+          stroke="var(--line)"
+          strokeWidth="1"
+        />
+      ))}
+      {areaPath && <path d={areaPath} fill="url(#trafficFill)" />}
+      {linePath && <path d={linePath} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />}
+      {msSegments.map((s, i) => (
+        <path
+          key={i}
+          d={`M${s.map(([x, y]) => `${x},${y}`).join(' L')}`}
+          fill="none"
+          stroke="var(--hold)"
+          strokeWidth="1.5"
+          strokeDasharray="3 3"
+          strokeLinecap="round"
+          opacity="0.85"
+        />
+      ))}
+      {points.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={daily[i] ? 3 : 0} fill="var(--ink)" stroke="var(--accent)" strokeWidth="1.75" />
+      ))}
+      {labels.map((label, i) => (
+        <text
+          key={i}
+          x={padX + i * stepX}
+          y={h - 6}
+          textAnchor="middle"
+          fontSize="10"
+          fontFamily="JetBrains Mono, monospace"
+          fill="var(--dim)"
+        >
+          {label}
+        </text>
+      ))}
+    </svg>
+  )
+}
+
+/** Compact ring chart for method / status distribution. */
+function DonutChart({ segments, size = 112, thickness = 13 }) {
+  const total = segments.reduce((s, seg) => s + seg.value, 0) || 1
+  const r = (size - thickness) / 2
+  const c = 2 * Math.PI * r
+  let offset = 0
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} className="shrink-0 -rotate-90">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth={thickness} />
+      {segments.map((seg, i) => {
+        const frac = seg.value / total
+        const dash = frac * c
+        const el = (
+          <circle
+            key={i}
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={thickness}
+            strokeDasharray={`${dash} ${c - dash}`}
+            strokeDashoffset={-offset}
+            strokeLinecap={segments.length > 1 ? 'butt' : 'round'}
+          />
+        )
+        offset += dash
+        return el
+      })}
+    </svg>
+  )
+}
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
@@ -142,8 +305,32 @@ export function OverviewPanel({ onOpen, onNavigate, onNewRequest }) {
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
   const first = (user?.name || user?.email || '').split(/[ @]/)[0]
   const daily = view?.daily_sends || []
-  const peak = Math.max(1, ...daily)
+  const dailyAvgMs = view?.daily_avg_ms || []
   const isNewUser = status === 'ready' && !view.request_count && !view.history_count
+
+  const methodSegments = useMemo(
+    () =>
+      (view?.method_breakdown || []).map((m) => ({
+        label: m.method,
+        value: m.count,
+        color: METHOD_HEX[m.method] || 'var(--dim)',
+      })),
+    [view?.method_breakdown],
+  )
+  const statusSegments = useMemo(
+    () =>
+      (view?.status_breakdown || []).map((s) => {
+        const key = s.class_ ?? s.class
+        const meta = STATUS_CLASS_META[key]
+        return {
+          label: meta?.label || key,
+          value: s.count,
+          color: meta?.color || 'var(--dim)',
+        }
+      }),
+    [view?.status_breakdown],
+  )
+  const statusTotal = statusSegments.reduce((s, seg) => s + seg.value, 0)
 
   return (
     <PanelFrame
@@ -202,103 +389,195 @@ export function OverviewPanel({ onOpen, onNavigate, onNewRequest }) {
 
       {status === 'ready' && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
                 icon: FolderTree,
                 target: 'collections',
-                primary: { label: 'Requests saved', value: view.request_count, sub: `${view.environment_count} environments` },
-                secondary: { label: 'Sends', value: view.history_count, sub: `${view.sends_last_7d ?? 0} in last 7d` },
+                label: 'Requests saved',
+                value: view.request_count,
+                sub: `${view.environment_count} environments`,
+              },
+              {
+                icon: Send,
+                target: 'history',
+                label: 'Sends',
+                value: view.history_count,
+                sub: `${view.sends_last_7d ?? 0} in last 7d`,
               },
               {
                 icon: Check,
                 target: 'history',
-                primary: { label: 'Success rate', value: view.success_rate == null ? '—' : `${view.success_rate}%`, sub: 'responses 2xx–3xx' },
-                secondary: {
-                  label: 'Avg latency',
-                  value: view.avg_duration_ms == null ? '—' : view.avg_duration_ms,
-                  unit: view.avg_duration_ms == null ? '' : 'ms',
-                  sub: 'across all sends',
-                },
+                label: 'Success rate',
+                value: view.success_rate == null ? '—' : `${view.success_rate}%`,
+                sub: 'responses 2xx–3xx',
+              },
+              {
+                icon: Timer,
+                target: 'history',
+                label: 'Avg latency',
+                value: view.avg_duration_ms == null ? '—' : view.avg_duration_ms,
+                unit: view.avg_duration_ms == null ? '' : 'ms',
+                sub:
+                  view.fastest_ms == null
+                    ? 'across all sends'
+                    : `${view.fastest_ms}–${view.slowest_ms} ms range`,
               },
             ].map((s, i) => (
               <button
-                key={s.primary.label}
+                key={s.label}
                 onClick={() => onNavigate(s.target)}
                 className="app-card app-card-hover animate-fade-up p-5 text-left"
                 style={{ animationDelay: `${i * 40}ms` }}
               >
                 <span className="icon-chip">
-                  <s.icon size={18} strokeWidth={1.75} />
+                  <s.icon size={17} strokeWidth={1.75} />
                 </span>
-                <div className="mt-5 grid grid-cols-2 gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-muted">{s.primary.label}</p>
-                    <p className="mt-1.5 text-[28px] font-bold leading-none tracking-tightest text-text sm:text-[32px]">{s.primary.value}</p>
-                    <p className="mono mt-3 truncate text-[11px] text-dim">{s.primary.sub}</p>
-                  </div>
-                  <div className="min-w-0 border-l border-line pl-4">
-                    <p className="truncate text-[13px] font-medium text-muted">{s.secondary.label}</p>
-                    <p className="mt-1.5 flex items-baseline gap-1 text-[28px] font-bold leading-none tracking-tightest text-text sm:text-[32px]">
-                      {s.secondary.value}
-                      {s.secondary.unit && <span className="text-[13px] font-medium text-muted">{s.secondary.unit}</span>}
-                    </p>
-                    <p className="mono mt-3 truncate text-[11px] text-dim">{s.secondary.sub}</p>
-                  </div>
-                </div>
+                <p className="mt-5 truncate text-[13px] font-medium text-muted">{s.label}</p>
+                <p className="mt-1.5 flex items-baseline gap-1 text-[26px] font-bold leading-none tracking-tightest text-text sm:text-[30px]">
+                  {s.value}
+                  {s.unit && <span className="text-[12.5px] font-medium text-muted">{s.unit}</span>}
+                </p>
+                <p className="mono mt-3 truncate text-[11px] text-dim">{s.sub}</p>
               </button>
             ))}
           </div>
 
-          <div className={cx('mt-4 grid gap-4', daily.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_380px]')}>
-            <div className="min-w-0">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold tracking-tightest text-text">Recent sends</h2>
-                {view.recent?.length > 0 && (
-                  <button
-                    onClick={() => onNavigate('history')}
-                    className="text-[12.5px] text-muted transition hover:text-accent"
-                  >
-                    View all
-                  </button>
-                )}
-              </div>
-              {view.recent?.length ? (
-                <SendsTable rows={view.recent} onOpen={onOpen} />
-              ) : (
-                <EmptyState
-                  icon={HistoryIcon}
-                  title="No sends yet"
-                  body="Start a new request and send it. It will show up here with its status and duration."
-                  action={
-                    <Button size="sm" variant="premium" onClick={onNewRequest}>
-                      <Plus size={15} strokeWidth={2.5} /> New request
-                    </Button>
-                  }
-                />
-              )}
-            </div>
-
-            {daily.length > 0 && (
-              <div className="min-w-0">
-                <h2 className="mb-3 text-[15px] font-semibold tracking-tightest text-text">Sends · last 7 days</h2>
-                <div className="app-card p-5">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-[32px] font-bold leading-none tracking-tightest text-text">{view.sends_last_7d}</p>
-                    <span className="mono text-[11px] text-muted">total</span>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="app-card min-w-0 p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tightest text-text">
+                    <TrendingUp size={15} className="text-accent" /> Traffic · last 7 days
+                  </h2>
+                  <p className="mt-1 text-[12px] text-dim">Sends volume against average response time</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-[22px] font-bold leading-none tracking-tightest text-text">{view.sends_last_7d}</p>
+                    <p className="mono mt-1 text-[10px] text-dim">sends</p>
                   </div>
-                  <div className="mt-6 flex h-32 items-end gap-2.5">
-                    {daily.map((n, i) => (
-                      <div
-                        key={i}
-                        title={`${n} sends`}
-                        className="flex-1 rounded-md bg-gradient-to-t from-accent-deep/40 to-accent"
-                        style={{ height: `${Math.max(6, (n / peak) * 100)}%`, opacity: n ? 1 : 0.22 }}
-                      />
-                    ))}
+                  <div className="flex items-center gap-3 text-[11px]">
+                    <span className="flex items-center gap-1.5 text-muted">
+                      <span className="h-1.5 w-3 rounded-full bg-accent" /> volume
+                    </span>
+                    <span className="flex items-center gap-1.5 text-muted">
+                      <span className="h-px w-3 border-t border-dashed border-hold" /> latency
+                    </span>
                   </div>
                 </div>
               </div>
+              {daily.some((n) => n > 0) ? (
+                <div className="mt-4">
+                  <TrafficChart daily={daily} dailyAvgMs={dailyAvgMs} />
+                </div>
+              ) : (
+                <div className="mt-6 flex h-40 items-center justify-center rounded-xl border border-dashed border-line text-[12.5px] text-dim">
+                  No traffic yet this week
+                </div>
+              )}
+              <div className="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-4">
+                <div>
+                  <p className="mono text-[10px] uppercase tracking-wide text-dim">Fastest</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-pass">
+                    <Zap size={12} /> {view.fastest_ms ?? '—'}
+                    {view.fastest_ms != null && <span className="text-[11px] font-medium text-muted">ms</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="mono text-[10px] uppercase tracking-wide text-dim">Average</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-text">
+                    <Gauge size={12} className="text-accent" /> {view.avg_duration_ms ?? '—'}
+                    {view.avg_duration_ms != null && <span className="text-[11px] font-medium text-muted">ms</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="mono text-[10px] uppercase tracking-wide text-dim">Slowest</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-[14px] font-semibold text-fail">
+                    <Timer size={12} /> {view.slowest_ms ?? '—'}
+                    {view.slowest_ms != null && <span className="text-[11px] font-medium text-muted">ms</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="app-card p-5">
+                <h2 className="text-[13.5px] font-semibold tracking-tightest text-text">Methods</h2>
+                {methodSegments.length ? (
+                  <div className="mt-4 flex items-center gap-4">
+                    <DonutChart segments={methodSegments} />
+                    <ul className="min-w-0 flex-1 space-y-1.5">
+                      {methodSegments.map((seg) => (
+                        <li key={seg.label} className="flex items-center justify-between gap-2 text-[12px]">
+                          <span className="mono flex items-center gap-1.5 truncate text-muted">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: seg.color }} />
+                            {seg.label}
+                          </span>
+                          <span className="mono shrink-0 text-text">{seg.value}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-[12px] text-dim">No sends yet.</p>
+                )}
+              </div>
+
+              <div className="app-card p-5">
+                <h2 className="text-[13.5px] font-semibold tracking-tightest text-text">Status codes</h2>
+                {statusSegments.length ? (
+                  <ul className="mt-4 space-y-3">
+                    {statusSegments.map((seg) => (
+                      <li key={seg.label}>
+                        <div className="flex items-center justify-between text-[11.5px]">
+                          <span className="flex items-center gap-1.5 text-muted">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: seg.color }} />
+                            {seg.label}
+                          </span>
+                          <span className="mono text-text">{seg.value}</span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${(seg.value / statusTotal) * 100}%`, background: seg.color }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-[12px] text-dim">No sends yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 min-w-0">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold tracking-tightest text-text">Recent sends</h2>
+              {view.recent?.length > 0 && (
+                <button
+                  onClick={() => onNavigate('history')}
+                  className="text-[12.5px] text-muted transition hover:text-accent"
+                >
+                  View all
+                </button>
+              )}
+            </div>
+            {view.recent?.length ? (
+              <SendsTable rows={view.recent} onOpen={onOpen} />
+            ) : (
+              <EmptyState
+                icon={HistoryIcon}
+                title="No sends yet"
+                body="Start a new request and send it. It will show up here with its status and duration."
+                action={
+                  <Button size="sm" variant="premium" onClick={onNewRequest}>
+                    <Plus size={15} strokeWidth={2.5} /> New request
+                  </Button>
+                }
+              />
             )}
           </div>
         </>

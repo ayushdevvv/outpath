@@ -1,12 +1,101 @@
-# Outpath
+<div align="center">
 
-Outpath is a web-first API testing workspace. Normal requests execute through the hosted FastAPI backend; local/private requests execute **directly from the browser** using Chrome/Chromium Local Network Access (LNA).
+# OUT<span style="color:#22C55E">PATH</span>
 
-## Local API testing
+**Build requests. Send them anywhere. Inspect every response.**
 
-There is no Chrome extension, Web Store setup, Cloudflare Tunnel setup, or local installer in this build.
+A web-first API testing workspace — collections, environments, assertions and history, with local/private targets hitting your machine straight from the browser.
 
-Flow:
+![status](https://img.shields.io/badge/status-active-22C55E?style=flat-square)
+![stack](https://img.shields.io/badge/stack-React%20%2B%20FastAPI-0A0F14?style=flat-square&labelColor=05070A)
+![license](https://img.shields.io/badge/license-private-8B9A9B?style=flat-square)
+
+</div>
+
+<br />
+
+<p align="center">
+  <img src="docs/screenshots/landing-hero.png" alt="Outpath landing page — client, relay and API server pipeline" width="100%" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/request-workspace.png" alt="Outpath request workspace — request builder and live response" width="100%" />
+</p>
+
+## What is Outpath
+
+Outpath is an API client in the spirit of Postman or Thunder Client, built to run entirely in the browser. Requests to public APIs are relayed through the hosted FastAPI backend; requests to `localhost` or a private LAN target are sent **directly from the browser** using Chrome's Local Network Access (LNA), so nothing you test on your own machine ever has to leave it.
+
+## Features
+
+- **Request builder** — params, headers, auth, and body editing with a live, syntax-highlighted response pane (status, timing, size, headers, raw).
+- **Collections** — organize saved requests into folders you can reopen, edit and re-send.
+- **Environments** — swap variable sets (`{{base_url}}`, tokens, etc.) per environment without touching a request.
+- **Assertions** — attach pass/fail checks to a request and see them evaluated against the real response.
+- **History** — every send is logged with method, status, duration and size, searchable and replayable.
+- **Overview dashboard** — request/send counts, success rate, latency range, a 7-day traffic chart with a latency overlay, and method/status-code breakdowns at a glance.
+- **Local Network Access** — send requests to `127.0.0.1` or a private IP straight from the browser tab, permissioned by Chrome, no extension or tunnel required.
+- **AI error hints** *(optional)* — when `GROQ_API_KEY` is set, failed requests get a short diagnosis of what likely went wrong.
+
+## Tech stack
+
+| Layer      | Choice |
+| ---------- | ------ |
+| Frontend   | React + Vite, Tailwind CSS, Framer Motion |
+| Backend    | FastAPI, SQLAlchemy, Alembic |
+| Database   | PostgreSQL (Neon) |
+| Local reach | Browser Local Network Access (Chrome 142+) |
+| Auth       | Google OAuth / session |
+
+## Architecture
+
+```text
+┌──────────┐      request       ┌──────────────┐      forwarded       ┌─────────────┐
+│  Client  │ ──────────────────▶│ Outpath Relay │ ────────────────────▶│  API server  │
+│ (browser)│◀────────────────── │   (FastAPI)   │◀──────────────────── │ (public host) │
+└──────────┘      response      └──────────────┘        response       └─────────────┘
+
+┌──────────┐   direct via LNA   ┌─────────────────────────┐
+│  Client  │ ──────────────────▶│ localhost / private LAN   │
+│ (browser)│◀────────────────── │        target             │
+└──────────┘      response      └─────────────────────────┘
+```
+
+Public targets go **client → relay → server**, measured and verified end to end. Local and private targets skip the relay entirely and go straight from the tab to your machine, using the browser's `targetAddressSpace` (`loopback` for `localhost`/`127.0.0.1`, `local` for LAN IPs).
+
+## Quick start
+
+### Backend
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite app at `http://localhost:5173`.
+
+### Environment variables
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `ALLOWED_ORIGINS` | backend | JSON list of frontend origins allowed through CORS |
+| `GROQ_API_KEY` | backend | enables AI error-hint diagnosis on failed sends |
+| `GROQ_MODEL` | backend | defaults to `openai/gpt-oss-120b` |
+
+## Local API testing (Local Network Access)
+
+There is no Chrome extension, Web Store listing, tunnel, or local installer in this build — local testing works through the browser's own LNA permission.
 
 ```text
 https://outpath.vercel.app
@@ -19,24 +108,11 @@ http://127.0.0.1:8000
 local/private API
 ```
 
-The browser request uses Fetch `targetAddressSpace` (`loopback` for localhost/127.0.0.1 and `local` for private/LAN targets). Chrome's LNA permission is controlled by the browser; the page must be served from a secure context such as HTTPS.
+`localhost`/`127.0.0.1` requests are sent as the `loopback` address space; private LAN destinations (e.g. `192.168.x.x`) are sent as `local`. The Outpath page must be served over HTTPS for Chrome to grant the permission. On a supported Chrome build (LNA shipped in stable at Chrome 142, with the **Apps on device** / **Local Network** prompts refined in 145+), the first private/LAN request triggers a one-time permission prompt — allow it and resend. If Chrome has already blocked the permission, open the site information icon → **Site settings** and allow the local-device/network permission, then reload Outpath.
 
 ### Target API CORS
 
-A local API must allow the Outpath page origin. For the deployed app:
-
-```text
-https://outpath.vercel.app
-```
-
-For local development also allow:
-
-```text
-http://localhost:5173
-http://127.0.0.1:5173
-```
-
-FastAPI example:
+A local API must allow the Outpath origin, and must echo `Access-Control-Allow-Private-Network: true` when Chrome sends `Access-Control-Request-Private-Network: true`.
 
 ```python
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,19 +130,9 @@ app.add_middleware(
 )
 ```
 
-If the target API does not send CORS headers, the browser will block the response even when LNA permission is granted. That is a browser security rule; this web-only build intentionally does not bypass it.
+If the target API doesn't send CORS headers, the browser blocks the response even with LNA permission granted — that's a browser security rule this web-only build intentionally doesn't bypass.
 
-## Backend CORS
-
-The Outpath FastAPI backend is already configured for the deployed Outpath origin and local Vite development. Set `ALLOWED_ORIGINS` in Render to the exact frontend origins you use, for example:
-
-```env
-ALLOWED_ORIGINS=["https://outpath.vercel.app","http://localhost:5173"]
-```
-
-## Quick local LNA test
-
-This repo includes a tiny FastAPI target with the required CORS headers. Start it in a second terminal:
+### Try it against the bundled example API
 
 ```powershell
 cd examples\local-api
@@ -76,14 +142,14 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-Then in Outpath use:
+Then in Outpath:
 
 ```text
-GET http://127.0.0.1:8000/api/test
+GET  http://127.0.0.1:8000/api/test
 POST http://127.0.0.1:8000/api/echo
 ```
 
-For the POST body:
+POST body:
 
 ```json
 {
@@ -92,40 +158,12 @@ For the POST body:
 }
 ```
 
-On a supported Chrome build, the first private/LAN request can trigger the Local Network Access permission prompt. Allow it and send again if the browser asks. Chrome launched the LNA permission in stable with Chrome 142; the request must come from a secure context.
-
-## Local development
-
-Backend:
-
-```powershell
-cd backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Open the Vite app at `http://localhost:5173`.
-
 ## Production
 
-The Vercel app uses the `/api/*` rewrite to the Render backend. Google authentication remains on the existing OAuth/session flow.
+The Vercel-hosted frontend uses an `/api/*` rewrite to the Render-hosted backend. Set `ALLOWED_ORIGINS` on the backend to the exact deployed frontend origin(s), for example:
 
-## Local API testing (Chrome 145+)
+```env
+ALLOWED_ORIGINS=["https://outpath.vercel.app"]
+```
 
-Outpath uses browser Local Network Access for local/private requests. `localhost`/`127.0.0.1` are sent as the browser `loopback` address space; private LAN destinations are sent as `local`. For `localhost`/`127.0.0.1`, Chrome 145+ may show the **Apps on device** permission; for private LAN targets such as `192.168.x.x`, it uses **Local Network**. The deployed site must be HTTPS. The target API must allow the Outpath origin through CORS and, when Chrome sends `Access-Control-Request-Private-Network: true`, return `Access-Control-Allow-Private-Network: true`.
-
-If Chrome has already blocked the permission, open the site information icon → **Site settings** and allow the applicable local-device/network permission, then reload Outpath.
-
-### AI error hints
-
-Set `GROQ_API_KEY` on the backend to enable the request error diagnosis card. `GROQ_MODEL` defaults to `openai/gpt-oss-120b`.
+Google authentication runs on the existing OAuth/session flow — no extra setup beyond the standard OAuth credentials.
