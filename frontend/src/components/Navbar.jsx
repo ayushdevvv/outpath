@@ -11,8 +11,6 @@ const LINKS = [
   { href: '/docs', label: 'Docs' },
 ]
 
-/** The icon-only account affordance — a plain ringed circle, the way the
- *  reference nav treats it, not a filled button competing with the hero CTA. */
 function AccountButton({ user, status, signOut }) {
   const [open, setOpen] = useState(false)
 
@@ -102,9 +100,6 @@ export default function Navbar() {
       )}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      {/* True three-zone bar, edge to edge — logo pinned left, links pinned
-          to the page's own centre (not the midpoint between logo and
-          account button), account control pinned right. */}
       <nav className="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-5 sm:px-8 lg:px-12">
         <Link to="/" className="flex w-fit items-center" aria-label="Outpath home">
           <span className="ob-word ob-bold text-[18px] sm:text-[17px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>

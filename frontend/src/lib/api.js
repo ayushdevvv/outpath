@@ -34,12 +34,7 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Single entry point for every backend call.
- * Production Vercel traffic uses the same-origin /api rewrite and an httpOnly
- * cookie. A signed bearer fallback is also attached when available so auth does
- * not depend on cross-site cookie delivery.
- */
+
 export async function request(path, { method = 'GET', body, signal, headers } = {}) {
   if (!sameOriginInProduction && !BASE) {
     throw new ApiError(

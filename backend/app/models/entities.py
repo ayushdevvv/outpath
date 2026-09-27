@@ -28,7 +28,7 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    # Null when the account was created via OAuth only.
+                                                       
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -55,7 +55,7 @@ class OAuthAccount(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    provider: Mapped[str] = mapped_column(String(32))  # "google"
+    provider: Mapped[str] = mapped_column(String(32))            
     provider_account_id: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -95,8 +95,8 @@ class ApiRequest(Base):
     url: Mapped[str] = mapped_column(Text)
     params: Mapped[list] = mapped_column(JSONB, default=list)
     headers: Mapped[list] = mapped_column(JSONB, default=list)
-    # Auth config is stored as entered (usually a {{var}} reference), never a
-    # resolved secret — see services/history_service.py for what gets logged.
+                                                                             
+                                                                             
     auth: Mapped[dict] = mapped_column(JSONB, default=dict)
     body: Mapped[str] = mapped_column(Text, default="")
     position: Mapped[int] = mapped_column(Integer, default=0)
@@ -123,7 +123,7 @@ class Assertion(Base):
     request_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("api_requests.id", ondelete="CASCADE"), index=True
     )
-    kind: Mapped[str] = mapped_column(String(20))  # status | exists | equals | latency
+    kind: Mapped[str] = mapped_column(String(20))                                      
     path: Mapped[str] = mapped_column(String(255), default="")
     expected: Mapped[str] = mapped_column(String(255), default="")
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -174,7 +174,7 @@ class RequestHistory(Base):
     )
 
     method: Mapped[str] = mapped_column(String(10))
-    url: Mapped[str] = mapped_column(Text)  # resolved URL with secrets stripped
+    url: Mapped[str] = mapped_column(Text)                                      
     status: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -32,12 +32,12 @@ def normalize_async_database_url(raw_url: str) -> str:
 
     query = dict(url.query)
 
-    # libpq/psycopg connection URLs commonly include channel_binding=require.
-    # asyncpg does not accept that keyword, so it must not reach the driver.
+                                                                             
+                                                                            
     query.pop("channel_binding", None)
 
-    # PostgreSQL provider URLs often use sslmode=require. asyncpg expects
-    # `ssl=require` instead. Preserve an explicitly supplied asyncpg `ssl`.
+                                                                         
+                                                                           
     sslmode = query.pop("sslmode", None)
     if "ssl" not in query and sslmode is not None:
         query["ssl"] = sslmode

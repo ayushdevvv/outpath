@@ -14,7 +14,6 @@ function Booting() {
   )
 }
 
-/** Routes under /app require a session. Unknown state waits rather than flashing. */
 function RequireAuth({ children }) {
   const { status } = useAuth()
   if (status === 'loading') return <Booting />

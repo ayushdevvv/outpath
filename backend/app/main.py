@@ -20,8 +20,8 @@ settings = get_settings()
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
-# Never log request bodies, tokens or passwords — see app/utils/redact.py for
-# what gets written to the database, and keep the default logger free of them.
+                                                                             
+                                                                              
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -52,15 +52,15 @@ async def csrf_origin_guard(request: Request, call_next):
     return await call_next(request)
 
 
-# IMPORTANT: CORSMiddleware must be added AFTER (i.e. registered last, so it
-# wraps everything as the OUTERMOST layer). Starlette makes the most recently
-# added middleware the outermost one. When CORS was added before the CSRF
-# guard above, the guard's early 403 responses — and any other error that
-# bypasses call_next — never passed back through CORSMiddleware, so the
-# browser never saw an Access-Control-Allow-Origin header on them. That made
-# real, well-formed 403/500 responses show up in the browser as an opaque,
-# unhelpful "Failed to fetch" / CORS error instead of the actual message —
-# the root cause of the inconsistent-looking auth errors.
+                                                                            
+                                                                             
+                                                                         
+                                                                         
+                                                                       
+                                                                            
+                                                                          
+                                                                          
+                                                         
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,

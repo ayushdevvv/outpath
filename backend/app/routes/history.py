@@ -114,7 +114,7 @@ async def overview(user: User = Depends(get_current_user), db: AsyncSession = De
         )
     ).one()
 
-    # Sends per UTC day for the last 7 days, oldest first (powers the bar strip).
+                                                                                 
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     since = today - timedelta(days=6)
     stamps = await db.scalars(

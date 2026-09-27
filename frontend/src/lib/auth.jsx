@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
       setStatus('authed')
     } catch (err) {
       if (err instanceof ApiError && err.status === 0) {
-        // Backend unreachable — surface it rather than pretending the user is signed out.
         setStatus('anon')
         setUser(null)
         return

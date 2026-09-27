@@ -22,13 +22,6 @@ const uid = () => Math.random().toString(36).slice(2, 9)
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/**
- * The backend's execute endpoint only accepts a real database UUID (or
- * nothing at all) for environment_id/request_id. A request that hasn't
- * been saved yet has no server id, so anything that isn't a genuine UUID
- * is dropped rather than forwarded — sending one raises a 422 from the
- * UUID validator.
- */
 function asServerId(value) {
   return typeof value === 'string' && UUID_RE.test(value) ? value : null
 }
@@ -48,11 +41,6 @@ const BLANK = {
 
 function normalise(request) {
   if (!request) return { ...BLANK }
-  // Rows persisted on the backend are plain {key, value, enabled} dicts with
-  // no id of their own — ids only exist client-side, to give each row a
-  // stable React key and a safe target for edits. Without this, every row
-  // loaded from a saved request would share the same undefined id, and
-  // editing one field would silently edit all of them at once.
   const withIds = (rows) => (rows || []).map((r) => ({ id: r.id || uid(), enabled: true, ...r }))
   return {
     ...BLANK,
@@ -64,15 +52,13 @@ function normalise(request) {
   }
 }
 
-/* ------------------------------------------------------------ key/value rows */
-
 function PairEditor({ rows, onChange, placeholder, addLabel = 'Add row' }) {
   const update = (id, patch) => onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
   return (
     <div className="space-y-2">
       {rows.map((row) => (
-        <div key={row.id} className="flex items-center gap-2">
+        <div key={row.id} className="grid gap-2 sm:flex sm:items-center">
           <input
             type="checkbox"
             checked={row.enabled !== false}
@@ -82,14 +68,14 @@ function PairEditor({ rows, onChange, placeholder, addLabel = 'Add row' }) {
           />
           <Input
             mono
-            className="h-9 flex-1"
+            className="h-9 min-w-0 flex-1"
             value={row.key}
             placeholder={placeholder[0]}
             onChange={(e) => update(row.id, { key: e.target.value })}
           />
           <Input
             mono
-            className="h-9 flex-[1.4]"
+            className="h-9 min-w-0 flex-[1.4]"
             value={row.value}
             placeholder={placeholder[1]}
             onChange={(e) => update(row.id, { value: e.target.value })}
@@ -114,8 +100,6 @@ function PairEditor({ rows, onChange, placeholder, addLabel = 'Add row' }) {
   )
 }
 
-/* ------------------------------------------------------------------ main */
-
 export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSaved }) {
   const toast = useToast()
   const initialReq = useMemo(() => normalise(initialRequest), [initialRequest])
@@ -132,10 +116,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
   const [aiLoading, setAiLoading] = useState(false)
   const localBrowser = useMemo(() => getLocalBrowserSupport(), [])
   const abortRef = useRef(null)
-
-
-  // Collections only exist once saved — the picker only ever needs to
-  // offer genuine, saved collections.
   useEffect(() => {
     setReq(initialReq)
     setSavedFingerprint(JSON.stringify(initialReq))
@@ -169,8 +149,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty])
-
-  /* ---------------------------------------------------------------- send */
 
   const send = useCallback(async () => {
     const localTarget = isLocalTarget(resolvedUrl.value)
@@ -272,8 +250,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             size_bytes: sizeBytes,
           })
         } catch {
-          // A local browser request already happened successfully; history failure
-          // should not turn a successful local API call into a failed send.
         }
       }
 
@@ -293,7 +269,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             error: redactSecrets(message, secretValues),
           })
         } catch {
-          // Keep the execution error visible even when history cannot be recorded.
         }
       }
       setRun({
@@ -330,8 +305,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
       setAiLoading(false)
     }
   }
-
-  /* ---------------------------------------------------------------- save */
 
   const save = async () => {
     setSaving(true)
@@ -391,9 +364,8 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto xl:overflow-hidden">
-      {/* ---------------------------------------------------------- command bar */}
       <div className="app-toolbar shrink-0 px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
             value={req.name}
             onChange={(e) => patch({ name: e.target.value })}
@@ -424,12 +396,12 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
           </Button>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap sm:items-center">
           <select
             value={req.method}
             onChange={(e) => patch({ method: e.target.value })}
             className={cx(
-              'mono h-11 rounded-[10px] border border-line bg-black/30 px-3 text-[12.5px] font-semibold outline-none hover:border-line2 focus:border-accent/50',
+              'mono h-11 w-full sm:w-auto rounded-[10px] border border-line bg-black/30 px-3 text-[12.5px] font-semibold outline-none hover:border-line2 focus:border-accent/50',
               METHOD_TONE[req.method],
             )}
             aria-label="HTTP method"
@@ -443,7 +415,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
           <Input
             mono
-            className="h-11 min-w-[12rem] flex-1"
+            className="h-11 min-w-0 w-full flex-1"
             value={req.url}
             onChange={(e) => patch({ url: e.target.value })}
             placeholder="{{base_url}}/api/users"
@@ -451,7 +423,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             aria-label="Request URL"
           />
 
-          <Button variant="premium" className="h-11 min-w-[112px]" onClick={send} disabled={!canSend} busy={run.phase === 'sending'}>
+          <Button variant="premium" className="h-11 w-full min-w-0 sm:w-auto sm:min-w-[112px]" onClick={send} disabled={!canSend} busy={run.phase === 'sending'}>
             <Send size={15} /> Send
           </Button>
         </div>
@@ -484,14 +456,11 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
         )}
       </div>
 
-      {/* ------------------------------------------------------- pipeline band */}
       <div className="shrink-0 border-b border-line bg-black/25 px-4 py-3.5 sm:px-6">
         <OutpathPipeline stages={stages} premium />
       </div>
 
-      {/* --------------------------------------------- builder | response split */}
       <div className="grid shrink-0 xl:min-h-0 xl:flex-1 xl:shrink xl:grid-cols-2 xl:grid-rows-1 xl:divide-x xl:divide-line">
-        {/* ---------------------------------------------------------- builder */}
         <section className="flex min-w-0 flex-col xl:min-h-0 xl:overflow-y-auto">
           <div className="px-4 pt-4 sm:px-6">
             <h2 className="text-[14px] font-semibold tracking-tightest text-text">Request</h2>
@@ -559,7 +528,6 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
           </div>
         </section>
 
-        {/* --------------------------------------------------------- response */}
         <section className="flex min-h-[460px] min-w-0 flex-col border-t border-line xl:min-h-0 xl:overflow-y-auto xl:border-t-0">
           <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-6">
             <div>
@@ -600,7 +568,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
           )}
 
           {run.phase === 'done' && (run.error || run.result?.status >= 400) && (
-            <div className="mx-4 mt-4 sm:mx-6">
+            <div className="mx-3 mt-4 sm:mx-6">
               <ErrorAssistCard
                 status={run.result?.status}
                 statusText={run.result?.statusText}
@@ -714,7 +682,7 @@ function getQuickErrorHint(status, statusText, local) {
 function ErrorAssistCard({ status, statusText, quickHint, aiHint, aiLoading, onExplain }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-fail/20 bg-fail/[0.035] shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-fail/10 px-4 py-3">
+      <div className="flex flex-col gap-3 border-b border-fail/10 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-fail/20 bg-fail/10 text-fail">
             <AlertTriangle size={14} />
@@ -726,12 +694,12 @@ function ErrorAssistCard({ status, statusText, quickHint, aiHint, aiLoading, onE
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onExplain} busy={aiLoading}>
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={onExplain} busy={aiLoading}>
           <Bot size={14} /> {aiHint ? 'Refresh explanation' : 'Explain with Groq'}
         </Button>
       </div>
 
-      <div className="grid gap-3 p-4 lg:grid-cols-2">
+      <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-2">
         {quickHint && (
           <div className="rounded-xl border border-line bg-black/20 p-3">
             <div className="flex items-center gap-2 text-[11px] font-semibold text-text">
@@ -770,8 +738,6 @@ function ErrorAssistCard({ status, statusText, quickHint, aiHint, aiLoading, onE
     </div>
   )
 }
-
-/* ------------------------------------------------------------ auth editor */
 
 const AUTH_TYPES = [
   ['none', 'None'],
@@ -870,8 +836,6 @@ function AuthEditor({ auth, onChange }) {
     </div>
   )
 }
-
-/* ------------------------------------------------------- assertion editor */
 
 function AssertionEditor({ assertions, onChange }) {
   const update = (id, p) => onChange(assertions.map((a) => (a.id === id ? { ...a, ...p } : a)))

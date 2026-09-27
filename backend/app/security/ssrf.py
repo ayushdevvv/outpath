@@ -15,9 +15,9 @@ from urllib.parse import urlsplit
 
 ALLOWED_SCHEMES = {"http", "https"}
 
-# Cloud metadata endpoints — the classic SSRF target — blocked explicitly,
-# not just via the private-range check, since 169.254.169.254 is link-local
-# but callers sometimes special-case "public-looking" ranges by mistake.
+                                                                          
+                                                                           
+                                                                        
 _BLOCKED_HOSTS = {"169.254.169.254", "metadata.google.internal"}
 
 
@@ -70,13 +70,13 @@ def validate_outbound_url(raw_url: str) -> ValidatedTarget:
         )
 
     try:
-        # If the host is already a literal IP, this succeeds without a DNS lookup.
+                                                                                  
         ip = ipaddress.ip_address(host)
         if _is_disallowed_ip(ip):
             raise SsrfBlocked("This address is private or reserved and cannot be reached from Outpath.")
         resolved_ip = str(ip)
     except ValueError:
-        # Hostname — resolve and check every returned address.
+                                                              
         try:
             infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
         except socket.gaierror as exc:

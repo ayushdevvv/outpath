@@ -20,9 +20,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Older deployments may already contain duplicate OAuth identity rows.
-    # Keep the oldest deterministic row for each provider/account identity.
-    # ROW_NUMBER handles identical timestamps and NULL timestamps safely.
+                                                                          
+                                                                           
+                                                                         
     op.execute(
         sa.text(
             """
@@ -44,7 +44,7 @@ def upgrade() -> None:
         )
     )
 
-    # Do not fail if a manual deployment already created the constraint.
+                                                                        
     op.execute(
         sa.text(
             """

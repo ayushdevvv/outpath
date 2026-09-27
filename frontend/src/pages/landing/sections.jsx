@@ -19,7 +19,7 @@ import {
 import { Badge, Button, Dot, cx } from '@/components/ui'
 import OutpathPipeline, { STAGES } from '@/components/OutpathPipeline'
 
-/* ------------------------------------------------------------- primitives */
+
 
 function Section({ id, eyebrow, title, lede, children, className }) {
   return (
@@ -52,7 +52,7 @@ function Panel({ className, children }) {
   return <div className={cx('panel-premium', className)}>{children}</div>
 }
 
-/* ------------------------------------------------- 2. the pipeline, scrolled */
+
 
 const SCROLL_DETAIL = [
   'POST /api/orders',
@@ -63,13 +63,7 @@ const SCROLL_DETAIL = [
   '201 · 4.2 KB',
 ]
 
-/**
- * The "wow" beat of the pipeline section: a cylindrical database mesh with
- * a glowing core, a packet visibly entering and exiting it. Driven off the
- * same scrollYProgress already computed in PipelineSection, so it moves on
- * the same clock as the stage tracker above it — not a second animation
- * loop of its own.
- */
+
 function DatabaseCore({ scrollYProgress }) {
   const packetCx = useTransform(scrollYProgress, [0.42, 0.56, 0.7, 0.86], [80 - 54, 80, 80, 80 + 54])
   const packetOpacity = useTransform(scrollYProgress, [0.38, 0.46, 0.82, 0.9], [0, 1, 1, 0])
@@ -88,7 +82,7 @@ function DatabaseCore({ scrollYProgress }) {
             </radialGradient>
           </defs>
 
-          {/* glowing core, breathing with the scroll-linked pass */}
+          
           <motion.circle
             cx="80"
             cy="65"
@@ -97,7 +91,7 @@ function DatabaseCore({ scrollYProgress }) {
             style={{ opacity: coreOpacity, scale: coreScale }}
           />
 
-          {/* rotating glass-edge wireframe — the "beating heart" shell */}
+          
           <g className="origin-center animate-spin-slow" style={{ transformBox: 'fill-box' }}>
             <ellipse cx="80" cy="55" rx="46" ry="13" fill="none" stroke="#334049" strokeWidth="0.75" opacity="0.55" />
             <ellipse cx="80" cy="75" rx="46" ry="13" fill="none" stroke="#334049" strokeWidth="0.75" opacity="0.55" />
@@ -105,13 +99,13 @@ function DatabaseCore({ scrollYProgress }) {
             <path d="M126 28 L126 100" stroke="#243036" strokeWidth="1" />
           </g>
 
-          {/* static glass edges — the vessel itself, not spinning */}
+          
           <ellipse cx="80" cy="28" rx="46" ry="13" fill="none" stroke="#22C55E" strokeOpacity="0.4" strokeWidth="1.2" />
           <ellipse cx="80" cy="100" rx="46" ry="13" fill="none" stroke="#22C55E" strokeOpacity="0.22" strokeWidth="1" />
           <path d="M34 28 L34 100" stroke="#22C55E" strokeOpacity="0.18" strokeWidth="1" />
           <path d="M126 28 L126 100" stroke="#22C55E" strokeOpacity="0.18" strokeWidth="1" />
 
-          {/* the packet: visibly enters the cylinder, dwells at the core, exits the other side */}
+          
           <motion.circle cy="65" r="4" fill="#3ADB8C" style={{ cx: packetCx, opacity: packetOpacity }} />
         </svg>
       </div>
@@ -155,7 +149,7 @@ export function PipelineSection() {
   )
 }
 
-/* ------------------------------------------------------- 3. request builder */
+
 
 const HEADERS = [
   ['Content-Type', 'application/json'],
@@ -243,7 +237,7 @@ export function BuilderSection() {
   )
 }
 
-/* -------------------------------------------------------- 4. response view */
+
 
 export function ResponseSection() {
   return (
@@ -277,7 +271,7 @@ export function ResponseSection() {
   )
 }
 
-/* ----------------------------------------------------------- 5. assertions */
+
 
 const CHECKS = [
   { name: 'Status', expected: 'Expected 200', actual: 'Received 200', verdict: 'PASS' },
@@ -325,7 +319,7 @@ export function AssertionSection() {
   )
 }
 
-/* ------------------------------------------------------- 6. workflows */
+
 
 const FEATURES = [
   { icon: FolderTree, name: 'Collections', body: 'Group requests into folders that mirror how your service is actually organised.' },
@@ -366,7 +360,7 @@ export function WorkflowSection() {
   )
 }
 
-/* ---------------------------------------------------------- local access */
+
 
 export function LocalAccessSection() {
   return (
@@ -396,7 +390,7 @@ export function LocalAccessSection() {
   )
 }
 
-/* ------------------------------------------------------------- 8. security */
+
 
 const GUARDS = [
   ['Outbound requests are validated', 'Schemes, ports and resolved IPs are checked before a connection opens, so a URL cannot be pointed at internal infrastructure.'],
@@ -458,7 +452,7 @@ export function SecuritySection() {
   )
 }
 
-/* -------------------------------------------------------------- final CTA */
+
 
 export function ClosingSection() {
   return (

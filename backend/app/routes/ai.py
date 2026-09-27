@@ -36,9 +36,9 @@ def _redact_body(value: str) -> str:
     if not value:
         return ""
     text = _SECRET_KEY_RE.sub(r"\1\2[REDACTED]", value)
-    # Keep the model context intentionally small. Error bodies are useful for
-    # diagnosis, but should never become an accidental full payload exfiltration
-    # path.
+                                                                             
+                                                                                
+           
     return text[:3000]
 
 

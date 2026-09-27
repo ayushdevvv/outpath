@@ -5,7 +5,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { Button, Field, Input, cx } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 
-/** A quiet dot-grid backdrop behind the centered card. */
+
 function Backdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -92,7 +92,7 @@ function Divider() {
   )
 }
 
-/* --------------------------------------------------------------- sign in */
+
 
 export function SignIn() {
   const { signIn, signInWithGoogleCredential, status } = useAuth()
@@ -181,7 +181,7 @@ export function SignIn() {
   )
 }
 
-/* --------------------------------------------------------------- sign up */
+
 
 export function SignUp() {
   const { signUp, signInWithGoogleCredential, status } = useAuth()

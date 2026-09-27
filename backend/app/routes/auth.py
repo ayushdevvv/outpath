@@ -13,8 +13,8 @@ from app.middleware.rate_limit import limiter
 from app.schemas import AuthSessionOut, GoogleCredentialIn, LoginIn, RegisterIn, UserOut
 from app.security import get_current_user, hash_password, issue_session_token, verify_password
 
-# A single shared Request object lets google-auth reuse one HTTP connection
-# pool across verifications instead of opening a new one every call.
+                                                                           
+                                                                    
 _google_auth_request = google_requests.Request()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -22,10 +22,10 @@ settings = get_settings()
 
 
 def _session_cookie_options() -> dict:
-    # Vercel frontend + Render API are cross-site in production. The session
-    # cookie therefore needs SameSite=None + Secure so credentialed fetches
-    # can carry the Outpath session. Local localhost development can safely
-    # stay on Lax.
+                                                                            
+                                                                           
+                                                                           
+                  
     production = settings.environment != "development"
     return {
         "secure": production,
@@ -94,7 +94,7 @@ async def me(user: User = Depends(get_current_user)):
     return user
 
 
-# --------------------------------------------------------- Google Identity Services
+                                                                                    
 
 @router.post("/google", response_model=AuthSessionOut)
 @limiter.limit("10/minute")
@@ -163,10 +163,10 @@ async def google_verify(
 
     name = str(info.get("name") or email.split("@")[0] or "Outpath user").strip()[:120]
 
-    # Match Cloud's canonical lookup: email is the account key. For first-time
-    # Google sign-in, create a passwordless/OAuth-only User. The unique email
-    # constraint makes this safe for normal single-login use; ON CONFLICT makes
-    # concurrent browser callbacks safe as well.
+                                                                              
+                                                                             
+                                                                               
+                                                
     user = await db.scalar(select(User).where(User.email == email))
 
     if user is None:
@@ -189,7 +189,7 @@ async def google_verify(
     return {"user": user, "session_token": token}
 
 
-# Backward-compatible alias for browsers still holding an older Outpath bundle.
+                                                                               
 @router.post("/google/verify", response_model=AuthSessionOut, include_in_schema=False)
 @limiter.limit("10/minute")
 async def google_verify_legacy(

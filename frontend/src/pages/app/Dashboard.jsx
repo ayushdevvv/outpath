@@ -74,7 +74,6 @@ export default function Dashboard() {
     [envList, activeEnvId],
   )
 
-  /** Flat name -> value map handed to the variable resolver. */
   const vars = useMemo(() => {
     const out = {}
     for (const v of activeEnv?.variables || []) out[v.name] = v.value
@@ -102,7 +101,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-[100svh] overflow-hidden bg-ink">
-      {/* ------------------------------------------------------------ sidebar */}
       <aside
         className={cx(
           'fixed inset-y-0 left-0 z-40 flex w-[264px] flex-col border-r border-line bg-panel transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] lg:static lg:translate-x-0',
@@ -183,9 +181,8 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      {/* --------------------------------------------------------------- main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 min-w-0 shrink-0 items-center gap-3 overflow-x-auto border-b border-line bg-ink/80 px-4 backdrop-blur-xl sm:px-6">
+        <header className="flex min-h-14 min-w-0 shrink-0 items-center gap-2 overflow-x-auto border-b border-line bg-ink/80 px-3 py-2 backdrop-blur-xl sm:h-14 sm:px-6 sm:py-0">
           <button
             className="shrink-0 text-muted transition hover:text-text lg:hidden"
             onClick={() => setNavOpen(true)}
@@ -194,7 +191,6 @@ export default function Dashboard() {
             <Menu size={18} />
           </button>
 
-          {/* environment switcher — shrinks with a truncated name before the row scrolls */}
           <div className="relative min-w-0 shrink">
             {environments === null && !envError ? (
               <Skeleton className="h-9 w-36" />

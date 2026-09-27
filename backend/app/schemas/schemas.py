@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-# ---------------------------------------------------------------- auth
+                                                                       
 
 class RegisterIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
@@ -34,7 +34,7 @@ class GoogleCredentialIn(BaseModel):
 
 
 
-# ------------------------------------------------------------ key/value rows
+                                                                             
 
 class KeyValueIn(BaseModel):
     key: str = ""
@@ -42,7 +42,7 @@ class KeyValueIn(BaseModel):
     enabled: bool = True
 
 
-# -------------------------------------------------------------- assertions
+                                                                           
 
 class AssertionIn(BaseModel):
     kind: Literal["status", "exists", "equals", "latency"]
@@ -56,7 +56,7 @@ class AssertionOut(AssertionIn):
     id: uuid.UUID
 
 
-# ---------------------------------------------------------------- auth cfg
+                                                                           
 
 class AuthConfigIn(BaseModel):
     type: Literal["none", "bearer", "basic", "apikey"] = "none"
@@ -70,7 +70,7 @@ class AuthConfigIn(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
-# ------------------------------------------------------------------ requests
+                                                                             
 
 class RequestIn(BaseModel):
     name: str = "Untitled request"
@@ -99,7 +99,7 @@ class RequestOut(BaseModel):
     updated_at: datetime
 
 
-# --------------------------------------------------------------- collections
+                                                                             
 
 class CollectionIn(BaseModel):
     name: str = Field(min_length=1, max_length=160)
@@ -112,7 +112,7 @@ class CollectionOut(BaseModel):
     requests: list[RequestOut] = Field(default_factory=list)
 
 
-# -------------------------------------------------------------- environments
+                                                                             
 
 class EnvironmentIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
@@ -150,7 +150,7 @@ class EnvironmentOut(BaseModel):
     variables: list[EnvVariableOut] = Field(default_factory=list)
 
 
-# -------------------------------------------------------------- execution
+                                                                          
 
 class ExecuteIn(BaseModel):
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -191,7 +191,7 @@ class ExecuteOut(BaseModel):
     truncated: bool = False
 
 
-# ----------------------------------------------------------------- history
+                                                                           
 
 class HistoryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

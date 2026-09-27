@@ -7,10 +7,7 @@ export function cx(...parts) {
   return parts.filter(Boolean).join(' ')
 }
 
-/* --------------------------------------------------------------- button */
-
 const VARIANTS = {
-  // Every primary action in the product uses the same solid green, flat fill.
   primary:
     'bg-[#22C55E] text-ink font-bold shadow-[0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
   premium:
@@ -49,8 +46,6 @@ export const Button = forwardRef(function Button(
     </button>
   )
 })
-
-/* ---------------------------------------------------------------- input */
 
 export const Input = forwardRef(function Input({ className, mono, ...props }, ref) {
   return (
@@ -123,8 +118,6 @@ export function Field({ label, hint, error, children }) {
   )
 }
 
-/* ----------------------------------------------------------------- card */
-
 export function Card({ className, hover = false, padding = 'p-4', children, ...props }) {
   return (
     <div className={cx('app-card', padding, hover && 'app-card-hover', className)} {...props}>
@@ -132,8 +125,6 @@ export function Card({ className, hover = false, padding = 'p-4', children, ...p
     </div>
   )
 }
-
-/* ---------------------------------------------------------------- badge */
 
 const TONES = {
   pass: 'text-pass bg-pass/10 border-pass/25',
@@ -158,7 +149,6 @@ export function Badge({ tone = 'muted', className, children }) {
   )
 }
 
-/** Initials avatar — the one pattern used everywhere a user is represented. */
 export function Avatar({ user, size = 'h-7 w-7 text-[11px]', className }) {
   const initial = (user?.name || user?.email || '?').slice(0, 1).toUpperCase()
   return (
@@ -191,13 +181,10 @@ export function Dot({ tone = 'muted', pulse = false }) {
   )
 }
 
-/* -------------------------------------------------------------- loading */
-
 export function Skeleton({ className }) {
   return <div className={cx('skeleton-shimmer animate-shimmer rounded-lg', className)} />
 }
 
-/** Empty states invite an action rather than apologising. */
 export function EmptyState({ title, body, action, icon: Icon }) {
   return (
     <div className="app-card animate-fade-up flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
@@ -213,7 +200,6 @@ export function EmptyState({ title, body, action, icon: Icon }) {
   )
 }
 
-/** Errors say what happened and what to do next. */
 export function ErrorState({ title = 'Something failed', body, action }) {
   return (
     <div className="app-card animate-fade-up flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
@@ -226,8 +212,6 @@ export function ErrorState({ title = 'Something failed', body, action }) {
     </div>
   )
 }
-
-/* ----------------------------------------------------------------- tabs */
 
 export function Tabs({ tabs, value, onChange, className }) {
   return (
@@ -264,8 +248,6 @@ export function Tabs({ tabs, value, onChange, className }) {
     </div>
   )
 }
-
-/* ---------------------------------------------------------------- modal */
 
 export function Modal({ open, onClose, title, description, children, footer, size = 'sm' }) {
   const ref = useRef(null)
@@ -330,8 +312,6 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   )
 }
 
-/* ------------------------------------------------------------- dropdown */
-
 export function Dropdown({ open, onClose, anchor = 'left', className, children }) {
   const ref = useRef(null)
 
@@ -365,8 +345,6 @@ export function Dropdown({ open, onClose, anchor = 'left', className, children }
     </AnimatePresence>
   )
 }
-
-/* ------------------------------------------------------------ page frame */
 
 export function PageHeader({ title, subtitle, action }) {
   return (

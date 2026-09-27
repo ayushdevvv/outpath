@@ -40,7 +40,7 @@
     text-rendering: optimizeLegibility;
     font-feature-settings: 'cv11', 'ss01', 'calt';
   }
-  /* Keyboard focus stays visible everywhere. */
+  
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -69,8 +69,7 @@
 }
 
 @layer components {
-  /* One surface recipe, three elevations. Radius encodes hierarchy:
-     panels 14px, controls 8-10px, pills 999px. */
+  
   .surface {
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.006)), var(--panel);
     border: 1px solid var(--line);
@@ -101,8 +100,7 @@
     letter-spacing: -0.045em;
     line-height: 0.95;
   }
-  /* Outpath wordmark. Wide geometric sans, no cursive. First segment
-     neutral, second carries the product green. */
+  
   .ob-word {
     font-family: Michroma, Manrope, system-ui, sans-serif;
     font-weight: 400;
@@ -147,7 +145,7 @@
     display: none;
   }
 
-  /* One confident word carries the same green signal used by the product. */
+  
   .headline-flare {
     display: inline-block;
     background-image: linear-gradient(110deg, var(--accent-deep) 0%, var(--accent) 35%, var(--accent-soft) 52%, var(--accent) 70%, var(--accent-deep) 100%);
@@ -158,8 +156,7 @@
     animation: headline-sweep 7s ease-in-out infinite;
   }
 
-  /* Feature cards: hover lift + border glow, not a color-swap. Reuses the
-     same easing curve as the rest of the landing page's scroll reveals. */
+  
   .surface-glow {
     transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
       border-color 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
@@ -212,7 +209,7 @@
 }
 
 
-/* ---- premium landing primitives (same green-on-ink theme) ---- */
+
 @layer components {
   .ob-bold {
     font-weight: 700;
@@ -298,7 +295,7 @@
 }
 
 
-/* ---- in-app premium typography + components ---- */
+
 @layer components {
   .font-display {
     font-weight: 700;
@@ -335,10 +332,9 @@
 }
 
 
-/* ---- v4 · in-app premium system (same language as the landing CTA + panels) ---- */
+
 @layer components {
-  /* The in-app card: deep panel with the landing page's gradient hairline.
-     Static by default; `.app-card-hover` is only for cards that are clickable. */
+  
   .app-card {
     position: relative;
     border-radius: 16px;
@@ -372,13 +368,13 @@
     opacity: 1;
   }
 
-  /* Full-bleed bars that sit flush against the sidebar edge. */
+  
   .app-toolbar {
     border-bottom: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.006)), var(--panel);
   }
 
-  /* Row hover for lists inside cards. */
+  
   .app-row {
     transition: background-color 0.15s ease;
   }
@@ -386,7 +382,7 @@
     background: linear-gradient(90deg, rgba(34, 197, 94, 0.07), rgba(34, 197, 94, 0.015));
   }
 
-  /* Sidebar rail: active item gets a lit edge against the sidebar wall. */
+  
   .nav-rail {
     position: absolute;
     left: -12px;
@@ -396,5 +392,39 @@
     border-radius: 0 3px 3px 0;
     background: linear-gradient(180deg, var(--accent-soft), var(--accent-deep));
     box-shadow: 0 0 14px rgba(34, 197, 94, 0.6);
+  }
+}
+
+
+@layer components {
+  .responsive-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  html, body, #root {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .panel-premium,
+  .card-premium,
+  .app-card,
+  .workspace-card {
+    max-width: 100%;
+  }
+
+  pre,
+  code,
+  table {
+    max-width: 100%;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
   }
 }

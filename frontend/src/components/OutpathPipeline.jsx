@@ -29,15 +29,10 @@ function Glyph({ state }) {
   return <span className="block h-1 w-1 rounded-full bg-current opacity-50" />
 }
 
-/**
- * `stages` is [{ id, label, state, detail }] where state is one of
- * idle | active | ok | warn | failed | skipped.
- * Nothing here invents a value — `detail` is whatever the caller measured.
- */
 export default function OutpathPipeline({ stages, note, premium = false }) {
   return (
     <div className="w-full">
-      <ol className="flex min-w-full gap-2 overflow-x-auto pb-2 md:gap-3">
+      <ol className="flex w-max min-w-full gap-2 overflow-x-auto pb-2 md:w-full md:gap-3">
         {stages.map((stage, i) => {
           const tone = TONE[stage.state] || TONE.idle
           const next = stages[i + 1]
@@ -90,7 +85,6 @@ export default function OutpathPipeline({ stages, note, premium = false }) {
   )
 }
 
-/** Derive pipeline stage states from a real run. Stops at the first failure. */
 export function stagesFromRun({ phase, request, result, assertions, error, local = false }) {
   const idle = STAGES.map((s) => ({ ...s, state: 'idle', detail: '' }))
   if (phase === 'idle') return idle

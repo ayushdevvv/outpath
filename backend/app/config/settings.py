@@ -5,38 +5,38 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Neon/Postgres. Example:
-    # postgresql+asyncpg://user:pass@ep-xxx.neon.tech/outpath?ssl=require
+                             
+                                                                         
     database_url: str = "postgresql+asyncpg://outpath:outpath@localhost:5432/outpath"
 
-    # Session signing — set a long random value in production.
+                                                              
     secret_key: str = "change-me-in-production"
     session_cookie_name: str = "outpath_session"
-    session_max_age_seconds: int = 60 * 60 * 24 * 14  # 14 days
+    session_max_age_seconds: int = 60 * 60 * 24 * 14           
 
-    # CORS for the Outpath web app. Add your Vercel preview origin here when testing a preview deployment.
+                                                                                                          
     allowed_origins: list[str] = [
         "https://outpath.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
 
-    # Google Identity Services client ID used to verify the React-issued ID token.
+                                                                                  
     google_client_id: str = ""
 
-    # Optional Outpath error-diagnosis copilot. The key stays server-side.
+                                                                          
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
     groq_timeout_seconds: float = 12.0
 
-    # Outbound request execution limits — see security/ssrf.py.
+                                                               
     request_timeout_seconds: float = 15.0
-    max_response_bytes: int = 5 * 1024 * 1024  # 5 MB
+    max_response_bytes: int = 5 * 1024 * 1024        
     rate_limit_per_minute: str = "60/minute"
 
     environment: str = "development"
-    # Schema changes belong in the release/migration step in production.
-    # Keep startup migrations available for local development convenience.
+                                                                        
+                                                                          
     auto_migrate: bool = False
 
 

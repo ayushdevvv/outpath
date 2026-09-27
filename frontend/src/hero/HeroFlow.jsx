@@ -1,20 +1,8 @@
 import { useEffect, useRef } from 'react'
 
-/**
- * The hero visual is a flat, flowing signal diagram. Three stations —
- * client, relay, server — joined by braided
- * light-streaks, the way the reference key art reads: motion carried by
- * moving light, not by geometry or gradients. Plain 2D canvas, no three.js:
- * lighter to ship, and easier to make read crisp instead of hazy.
- */
-
 const SIGNAL = '34, 197, 94'
 const SIGNAL_SOFT = '52, 211, 153'
 const DIM = '86, 105, 108'
-
-// One flowing lane: a base sine wave, offset in phase/amplitude, drawn as
-// short moving dashes rather than a filled gradient stroke — the streaks
-// read as discrete light rather than a painted wash.
 function drawLane(ctx, { x0, x1, y, amp, freq, phase, color, alpha, width, dash, t }) {
   ctx.beginPath()
   const steps = 64
@@ -82,8 +70,6 @@ export default function HeroFlow() {
       const cx = width / 2
       const clientX = width * 0.145
       const serverX = width * 0.855
-
-      // The primary signal stays green throughout: request out, response back.
       const time = reduced ? 0 : t / 1000
       ;[0, 1].forEach((i) => {
         drawLane(ctx, {
@@ -131,9 +117,6 @@ export default function HeroFlow() {
       drawPad(ctx, clientX, midY + 92, 58, SIGNAL, pulse)
       drawPad(ctx, serverX, midY + 92, 58, SIGNAL, 1 - pulse)
       drawPad(ctx, cx, midY + 108, 66, SIGNAL_SOFT, pulse)
-
-      // Ambient drifting motes — sparse, so they read as depth cues rather
-      // than a particle-system centerpiece.
       const dots = 26
       for (let i = 0; i < dots; i++) {
         const seed = i * 137.5
@@ -185,18 +168,14 @@ export default function HeroFlow() {
     <div ref={wrapRef} className="absolute inset-0">
       <canvas ref={canvasRef} className="absolute inset-0" />
 
-      {/* The relay is a restrained product surface rather than decorative 3D. */}
       <div
-        className="absolute left-1/2 top-[50%] grid h-24 w-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl sm:h-28 sm:w-28"
-        style={{
-          background: 'linear-gradient(180deg, rgba(16, 24, 22, 0.96), rgba(7, 12, 10, 0.98))',
-          border: '1px solid rgba(34,197,94,0.38)',
-          boxShadow: '0 0 0 1px rgba(34,197,94,0.08), 0 30px 60px -20px rgba(34,197,94,0.28), 0 0 38px -10px rgba(34,197,94,0.22)',
-          animation: 'hero-breathe 3.6s ease-in-out infinite',
-        }}
+        className="absolute left-1/2 top-[50%] grid h-20 w-20 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-2xl border border-accent/35 bg-panel shadow-[0_0_0_1px_rgba(34,197,94,0.08),0_26px_52px_-24px_rgba(34,197,94,0.42)] sm:h-24 sm:w-24"
+        style={{ animation: 'hero-breathe 3.6s ease-in-out infinite' }}
       >
         <span className="absolute inset-2 rounded-xl border border-accent/10" />
-        <span className="ob-word relative text-[18px] sm:text-[20px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
+        <span className="relative font-display text-[20px] font-extrabold tracking-[-0.08em] sm:text-[24px]">
+          <span className="text-text">O</span><span className="text-accent">B</span>
+        </span>
       </div>
 
       <div className="absolute left-[3%] top-[69%] hidden sm:block">
@@ -208,13 +187,14 @@ export default function HeroFlow() {
       <div className="absolute right-[3%] top-[69%] hidden sm:block">
         <span className="mono rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-muted backdrop-blur-sm">API server</span>
       </div>
-      <div className="absolute right-[8%] top-[47%] hidden w-[110px] flex-col items-center sm:flex">
-        <div className="relative h-20 w-px bg-accent/30">
-          <span className="absolute -left-[1px] top-0 h-8 w-px origin-top animate-response-fall bg-accent" />
+      <div className="absolute right-[2%] top-[45%] flex w-[100px] flex-col items-center sm:right-[4%] sm:top-[44%] sm:w-[150px]">
+        <span className="mono rounded-full border border-pass/25 bg-pass/10 px-2 py-1 text-[9px] font-semibold tracking-wide text-pass sm:px-2.5 sm:text-[10px]">200 OK</span>
+        <div className="relative mt-2 h-16 w-px bg-accent/30">
+          <span className="absolute -left-px top-0 h-7 w-px animate-response-fall bg-accent" />
         </div>
-        <div className="mt-2 rounded-xl border border-line bg-ink/85 px-3 py-2 text-left shadow-lift">
-          <p className="mono text-[9px] uppercase tracking-[0.16em] text-muted">Request 01</p>
-          <p className="mono mt-1 text-[10px] text-pass">response received</p>
+        <div className="mt-2 w-full rounded-xl border border-line bg-ink/88 px-2.5 py-2 text-left shadow-lift sm:px-3 sm:py-2.5">
+          <p className="mono text-[8px] uppercase tracking-[0.14em] text-muted sm:text-[9px] sm:tracking-[0.16em]">Request 01</p>
+          <p className="mono mt-1 text-[9px] text-text sm:text-[11px]"><span className="text-accent">GET</span> /api/users</p>
         </div>
       </div>
 

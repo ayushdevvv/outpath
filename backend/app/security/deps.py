@@ -22,9 +22,9 @@ def _request_token(request: Request) -> str | None:
 
 
 def _request_user_id(request: Request) -> uuid.UUID | None:
-    # Prefer the explicit bearer session issued by Outpath, then fall back to
-    # the HttpOnly cookie. The fallback is important for Vercel -> Render
-    # deployments where browser third-party-cookie policy can block the cookie.
+                                                                             
+                                                                         
+                                                                               
     authorization = request.headers.get("authorization", "")
     if authorization.lower().startswith("bearer "):
         bearer = authorization[7:].strip()

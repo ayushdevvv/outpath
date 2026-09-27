@@ -31,10 +31,6 @@ export function getLocalBrowserSupport() {
 
   version = match ? Number.parseInt(match[1], 10) || 0 : 0
 
-  // Chrome 142 introduced the permission-gated LNA flow. Edge ships the
-  // permission flow in current Chromium releases; keep the product gate on a
-  // conservative current desktop baseline instead of advertising support to
-  // mobile browsers or unknown Chromium shells.
   const supported = !mobile && ((browser === 'Chrome' && version >= 142) || (browser === 'Edge' && version >= 143))
 
   return { supported, browser, version, mobile }
@@ -75,10 +71,6 @@ export function isLoopbackTarget(url) {
 }
 
 function targetAddressSpace(url) {
-  // Chrome 145+ splits localhost/127.0.0.1 into the loopback address space
-  // and private LAN destinations into the local address space. Mark the Fetch
-  // request with the same address space so Chrome can apply the right
-  // permission (Apps on device vs Local Network).
   let host = ''
   try { host = normaliseHost(new URL(url).hostname) } catch {}
   return isLoopbackHost(host) ? 'loopback' : 'local'
@@ -224,10 +216,6 @@ export async function executeLocalRequest(payload, { signal } = {}) {
   }
   applyAuth(headers, url, payload.auth)
 
-  // Local Outpath auth is independent from the production Render session.
-  // After a local /api/auth/login (or register/Google login), keep the returned
-  // signed session token scoped to this exact local origin and automatically
-  // use it for later local protected requests such as /api/environments.
   if (!Object.keys(headers).some((key) => key.toLowerCase() === 'authorization')) {
     const localSessionToken = getLocalSessionToken(url)
     if (localSessionToken) headers.Authorization = `Bearer ${localSessionToken}`
@@ -248,8 +236,6 @@ export async function executeLocalRequest(payload, { signal } = {}) {
       mode: 'cors',
       redirect: 'follow',
       signal,
-      // Chrome's Local Network Access implementation uses this hint to classify
-      // the intended destination and gate the request behind browser permission.
       targetAddressSpace: targetAddressSpace(url.toString()),
     })
   } catch (error) {
@@ -272,9 +258,6 @@ export async function executeLocalRequest(payload, { signal } = {}) {
   const headersOut = {}
   response.headers.forEach((value, key) => { headersOut[key] = value })
 
-  // Persist only the signed Outpath session returned by a local auth endpoint.
-  // The token is intentionally scoped by origin so a credential for
-  // 127.0.0.1:8000 can never be sent to another local service.
   if (isLocalAuthPath(url)) {
     try {
       const parsed = JSON.parse(body)

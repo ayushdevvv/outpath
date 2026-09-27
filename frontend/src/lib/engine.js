@@ -1,11 +1,8 @@
-/**
- * Pure request/response logic. No React, no network — everything here is
- * deterministic so the same rules can be mirrored server-side.
- */
+
 
 const VAR_PATTERN = /\{\{\s*([\w.-]+)\s*\}\}/g
 
-/** Replace {{name}} with the active environment value. Unknown names are reported. */
+
 export function resolveVars(input, vars) {
   if (typeof input !== 'string') return { value: input, missing: [] }
   const missing = []
@@ -36,7 +33,7 @@ export function resolveAll(obj, vars) {
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', 'host.docker.internal'])
 
-/** True when a URL points at the developer's own machine or a private range. */
+
 export function isLocalTarget(url) {
   let host
   try {
@@ -55,7 +52,7 @@ export function isLocalTarget(url) {
   return false
 }
 
-/** Safe dotted/bracket path lookup: response.user.id, items[0].name */
+
 export function getByPath(source, path) {
   if (!path) return undefined
   const cleaned = path.replace(/^(response|body|data)\./, '')
@@ -92,11 +89,7 @@ function describe(kind, path, expected) {
   }
 }
 
-/**
- * Evaluate assertions against a real result.
- * Returns PASS / FAIL / SKIPPED with expected and actual so the UI never has
- * to invent a value.
- */
+
 export function evaluateAssertions(assertions, result) {
   if (!Array.isArray(assertions) || assertions.length === 0) return []
   const parsed = result?.json ?? null
@@ -189,11 +182,7 @@ export const METHOD_TONE = {
   DELETE: 'text-fail',
 }
 
-/**
- * Replace any secret variable's resolved value with a placeholder before a
- * URL is persisted anywhere. Mirrors what the backend does for
- * server-executed requests in utils/redact.py.
- */
+
 export function redactSecrets(text, secretValues) {
   if (!text || !secretValues || secretValues.length === 0) return text
   let out = text

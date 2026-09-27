@@ -31,7 +31,7 @@ import { METHOD_TONE, statusTone } from '@/lib/engine'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 
-/** One loader for every panel: loading, error and empty are never blank. */
+
 function useResource(path) {
   const [state, setState] = useState({ status: 'loading', data: null, error: '' })
 
@@ -96,7 +96,7 @@ function ConfirmDeleteModal({ open, onClose, onConfirm, busy, itemLabel }) {
 }
 
 
-/** Method / URL / status / time — one table for Overview and History. */
+
 const SEND_COLS = 'grid-cols-[56px_minmax(0,1fr)_48px] md:grid-cols-[64px_minmax(0,1fr)_64px_84px] xl:grid-cols-[64px_minmax(0,1fr)_64px_84px_180px]'
 
 function SendsTable({ rows, onOpen, showWhen = false }) {
@@ -133,7 +133,7 @@ function SendsTable({ rows, onOpen, showWhen = false }) {
   )
 }
 
-/* ---------------------------------------------------------------- overview */
+
 
 export function OverviewPanel({ onOpen, onNavigate, onNewRequest }) {
   const { status, data, error, reload } = useResource('/api/overview')
@@ -286,7 +286,7 @@ export function OverviewPanel({ onOpen, onNavigate, onNewRequest }) {
   )
 }
 
-/* ------------------------------------------------------------- collections */
+
 
 export function CollectionsPanel({ onOpen, onChanged }) {
   const { status, data, error, reload } = useResource('/api/collections')
@@ -459,7 +459,7 @@ export function CollectionsPanel({ onOpen, onChanged }) {
   )
 }
 
-/* ------------------------------------------------------------ environments */
+
 
 export function EnvironmentsPanel({ environments, error, onChanged }) {
   const toast = useToast()
@@ -496,9 +496,6 @@ export function EnvironmentsPanel({ environments, error, onChanged }) {
   const create = async () => {
     setCreating(true)
     try {
-      // Environment names must be unique per account — a plain "New
-      // environment" would collide (409) the second time this is clicked,
-      // so pick a name that's free based on what's already there.
       const taken = new Set((environments || []).map((e) => e.name))
       let name = 'New environment'
       let n = 2
@@ -667,7 +664,7 @@ export function EnvironmentsPanel({ environments, error, onChanged }) {
   )
 }
 
-/* ----------------------------------------------------------------- history */
+
 
 export function HistoryPanel({ onOpen }) {
   const { status, data, error, reload } = useResource('/api/history?page=1&page_size=50')
@@ -714,7 +711,7 @@ export function HistoryPanel({ onOpen }) {
   )
 }
 
-/* ---------------------------------------------------------------- settings */
+
 
 export function SettingsPanel() {
   return (
