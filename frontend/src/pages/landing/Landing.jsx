@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Chrome, Globe2, ShieldCheck } from 'lucide-react'
 import Navbar from '@/components/Navbar'
+import SiteFooter from '@/components/SiteFooter'
 import { Button } from '@/components/ui'
 import {
   PipelineSection,
@@ -10,7 +11,6 @@ import {
   ResponseSection,
   LocalAccessSection,
   SecuritySection,
-  ClosingSection,
 } from './sections'
 import HeroFlow from '@/hero/HeroFlow'
 
@@ -103,21 +103,6 @@ function BrowserSupportStrip() {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="hairline mx-auto max-w-6xl px-5 py-10">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-muted">
-          <span className="ob-word text-[16px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
-        </div>
-        <p className="mono text-[11px] text-muted">
-          Public requests use Outpath’s server path. Local requests stay in your browser.
-        </p>
-      </div>
-    </footer>
-  )
-}
-
 export default function Landing() {
   return (
     <div className="bg-ink">
@@ -130,9 +115,8 @@ export default function Landing() {
         <ResponseSection />
         <LocalAccessSection />
         <SecuritySection />
-        <ClosingSection />
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

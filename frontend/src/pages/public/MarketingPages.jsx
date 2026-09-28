@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Chrome, Code2, Gauge, Globe2, Layers3, Lock, Network, ShieldCheck, Terminal, Workflow } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
+import SiteFooter from '@/components/SiteFooter'
 import { Button, cx } from '@/components/ui'
 
 const blocks = {
@@ -50,9 +51,7 @@ function Shell({ type, children }) {
         </section>
         {children}
       </main>
-      <footer className="hairline mx-auto max-w-6xl px-5 py-10">
-        <span className="ob-word text-[16px]"><span className="ob-o">OUT</span><span className="ob-b">PATH</span></span>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

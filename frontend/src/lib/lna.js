@@ -125,7 +125,7 @@ function isPermissionDeniedError(error) {
 }
 
 function buildUrl(baseUrl, params = []) {
-  const url = new URL(baseUrl)
+  const url = new URL(String(baseUrl).replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').trim())
   for (const p of params) {
     if (!p?.key) continue
     url.searchParams.append(String(p.key), String(p.value ?? ''))

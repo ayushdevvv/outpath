@@ -9,6 +9,7 @@ import {
   ASSERTION_KINDS,
   METHODS,
   METHOD_TONE,
+  cleanUrl,
   evaluateAssertions,
   formatBytes,
   resolveAll,
@@ -134,7 +135,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
   const patch = (p) => setReq((r) => ({ ...r, ...p }))
 
-  const resolvedUrl = useMemo(() => resolveVars(req.url, vars), [req.url, vars])
+  const resolvedUrl = useMemo(() => resolveVars(cleanUrl(req.url), vars), [req.url, vars])
 
   const isDirty = JSON.stringify(req) !== savedFingerprint
 
@@ -163,7 +164,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
 
     const rawPayload = {
       method: req.method,
-      url: req.url,
+      url: cleanUrl(req.url),
       params: enabled(req.params).map(({ key, value }) => ({ key, value })),
       headers: enabled(req.headers).map(({ key, value }) => ({ key, value })),
       auth: req.auth,
@@ -312,7 +313,7 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
       const payload = {
         name: req.name,
         method: req.method,
-        url: req.url,
+        url: cleanUrl(req.url),
         params: req.params,
         headers: req.headers,
         auth: req.auth,
@@ -418,6 +419,16 @@ export default function RequestWorkspace({ initialRequest, vars, activeEnv, onSa
             className="h-11 min-w-0 w-full flex-1"
             value={req.url}
             onChange={(e) => patch({ url: e.target.value })}
+            onPaste={(e) => {
+              const text = e.clipboardData.getData('text')
+              if (text !== cleanUrl(text)) {
+                e.preventDefault()
+                const el = e.currentTarget
+                const { selectionStart: a, selectionEnd: b } = el
+                patch({ url: el.value.slice(0, a) + cleanUrl(text) + el.value.slice(b) })
+              }
+            }}
+            onBlur={() => patch({ url: cleanUrl(req.url) })}
             placeholder="{{base_url}}/api/users"
             spellCheck={false}
             aria-label="Request URL"

@@ -6,6 +6,16 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
                                                                        
 
+_INVISIBLE = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff"), None)
+
+
+def _clean_url(value):
+    """Pasted URLs often carry leading/trailing spaces, newlines or zero-width characters."""
+    if isinstance(value, str):
+        return value.translate(_INVISIBLE).strip()
+    return value
+
+
 class RegisterIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: EmailStr
@@ -82,6 +92,12 @@ class RequestIn(BaseModel):
     body: str = ""
     assertions: list[AssertionIn] = []
     collection_id: uuid.UUID | None = None
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def _strip_url(cls, v):
+        return _clean_url(v)
+
 
 
 class RequestOut(BaseModel):
@@ -162,6 +178,12 @@ class ExecuteIn(BaseModel):
     environment_id: uuid.UUID | None = None
     request_id: uuid.UUID | None = None
 
+    @field_validator("url", mode="before")
+    @classmethod
+    def _strip_url(cls, v):
+        return _clean_url(v)
+
+
 
 class ErrorExplainIn(BaseModel):
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -171,6 +193,12 @@ class ErrorExplainIn(BaseModel):
     error_message: str = Field(default="", max_length=2000)
     response_body: str = Field(default="", max_length=6000)
     local: bool = False
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def _strip_url(cls, v):
+        return _clean_url(v)
+
 
 
 class ErrorExplainOut(BaseModel):

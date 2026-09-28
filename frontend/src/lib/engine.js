@@ -31,6 +31,11 @@ export function resolveAll(obj, vars) {
   return { value: walk(obj), missing: [...missing] }
 }
 
+/** Pasted URLs often carry leading/trailing spaces, newlines or zero-width characters. */
+export function cleanUrl(url) {
+  return typeof url === 'string' ? url.replace(/[\u200B-\u200D\u2060\uFEFF]/g, '').trim() : url
+}
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', 'host.docker.internal'])
 
 
