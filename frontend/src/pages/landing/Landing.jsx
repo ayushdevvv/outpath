@@ -8,8 +8,6 @@ import {
   PipelineSection,
   BuilderSection,
   ResponseSection,
-  AssertionSection,
-  WorkflowSection,
   LocalAccessSection,
   SecuritySection,
   ClosingSection,
@@ -130,8 +128,6 @@ export default function Landing() {
         <PipelineSection />
         <BuilderSection />
         <ResponseSection />
-        <AssertionSection />
-        <WorkflowSection />
         <LocalAccessSection />
         <SecuritySection />
         <ClosingSection />

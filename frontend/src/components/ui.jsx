@@ -9,9 +9,9 @@ export function cx(...parts) {
 
 const VARIANTS = {
   primary:
-    'bg-[#22C55E] text-ink font-bold shadow-[0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
+    'bg-[#22C55E] text-ink font-bold transition-colors duration-200 hover:bg-[#1FB559] active:bg-[#1AA34F] disabled:opacity-40',
   premium:
-    'bg-[#22C55E] text-ink font-bold shadow-[0_10px_28px_-16px_rgba(34,197,94,0.9)] transition-all duration-300 hover:brightness-105 hover:shadow-accent active:brightness-95 disabled:opacity-40 disabled:shadow-none',
+    'bg-[#22C55E] text-ink font-bold transition-colors duration-200 hover:bg-[#1FB559] active:bg-[#1AA34F] disabled:opacity-40',
   ghost: 'text-muted hover:text-text hover:bg-white/[0.06] disabled:opacity-40',
   outline: 'border border-line2 bg-white/[0.02] text-text shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] hover:border-accent/35 hover:bg-white/[0.045] disabled:opacity-40',
   danger: 'border border-fail/35 text-fail hover:bg-fail/10 disabled:opacity-40',
@@ -154,7 +154,7 @@ export function Avatar({ user, size = 'h-7 w-7 text-[11px]', className }) {
   return (
     <span
       className={cx(
-        'grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent-soft to-accent-deep font-bold text-ink shadow-[0_0_18px_-6px_rgba(34,197,94,0.7)]',
+        'grid shrink-0 place-items-center rounded-full bg-[#22C55E] font-bold text-ink',
         size,
         className,
       )}

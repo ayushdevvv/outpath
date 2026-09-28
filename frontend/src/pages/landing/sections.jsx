@@ -7,16 +7,13 @@ import {
   Check,
   Clock,
   FileJson,
-  FolderTree,
-  History,
   KeyRound,
   Lock,
   Chrome,
   Globe2,
   ShieldCheck,
-  Variable,
 } from 'lucide-react'
-import { Badge, Button, Dot, cx } from '@/components/ui'
+import { Badge, Button, cx } from '@/components/ui'
 import OutpathPipeline, { STAGES } from '@/components/OutpathPipeline'
 
 
@@ -273,100 +270,11 @@ export function ResponseSection() {
 
 
 
-const CHECKS = [
-  { name: 'Status', expected: 'Expected 200', actual: 'Received 200', verdict: 'PASS' },
-  { name: 'Response', expected: 'user.id exists', actual: 'Found 123', verdict: 'PASS' },
-  { name: 'Performance', expected: 'Under 500 ms', actual: '183 ms', verdict: 'PASS' },
-  { name: 'Schema', expected: 'order.total_cents is a number', actual: 'Received "4980"', verdict: 'FAIL' },
-]
-
-export function AssertionSection() {
-  return (
-    <Section
-      id="assertions"
-      eyebrow="04 · Assertions"
-      title="Verify every response."
-      lede="Write the check once and it runs on every send. A failing assertion shows what it wanted and what it got, side by side."
-    >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {CHECKS.map((c, i) => {
-          const pass = c.verdict === 'PASS'
-          return (
-            <motion.div
-              key={c.name}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-10%' }}
-              transition={{ delay: i * 0.07, duration: 0.5 }}
-              className={cx(
-                'card-premium p-4',
-                pass ? 'border-pass/20' : 'border-fail/35 bg-fail/[0.04]',
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium text-text">{c.name}</span>
-                <Badge tone={pass ? 'pass' : 'fail'}>{c.verdict}</Badge>
-              </div>
-              <p className="mono mt-3 text-[11px] text-muted">{c.expected}</p>
-              <p className={cx('mono mt-1 text-[11px]', pass ? 'text-text' : 'text-fail')}>
-                {c.actual}
-              </p>
-            </motion.div>
-          )
-        })}
-      </div>
-    </Section>
-  )
-}
-
-
-
-const FEATURES = [
-  { icon: FolderTree, name: 'Collections', body: 'Group requests into folders that mirror how your service is actually organised.' },
-  { icon: Boxes, name: 'Environments', body: 'Local, development and production, each with its own values. Switching changes what gets sent.' },
-  { icon: History, name: 'History', body: 'Every send is recorded with its status and duration. Reopen any of them as a live request.' },
-  { icon: Variable, name: 'Variables', body: 'Write {{base_url}} once. Outpath resolves it from the environment at send time.' },
-  { icon: KeyRound, name: 'Authentication', body: 'Bearer tokens, basic auth and API keys, stored per environment rather than pasted per request.' },
-  { icon: Check, name: 'Assertions', body: 'Status, field, value and latency checks that turn a response into a pass or a fail.' },
-]
-
-export function WorkflowSection() {
-  return (
-    <Section
-      id="workflow"
-      eyebrow="05 · Workflow"
-      title="Built for real development workflows."
-      lede="The parts you reach for on the fourth day of a project, not just the first."
-    >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f, i) => (
-          <motion.div
-            key={f.name}
-            initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-10%' }}
-            transition={{ delay: i * 0.05, duration: 0.6, ease: [0.2, 0.7, 0.3, 1] }}
-            className="card-premium p-6"
-          >
-            <span className="grid h-10 w-10 place-items-center rounded-xl border border-accent/30 bg-gradient-to-b from-accent/20 to-accent/5 text-accent shadow-[0_0_24px_-6px_rgba(34,197,94,0.55)]">
-              <f.icon size={17} strokeWidth={1.75} />
-            </span>
-            <h3 className="mt-4 text-[15px] font-medium text-text">{f.name}</h3>
-            <p className="mt-2 text-[13px] leading-relaxed text-muted">{f.body}</p>
-          </motion.div>
-        ))}
-      </div>
-    </Section>
-  )
-}
-
-
-
 export function LocalAccessSection() {
   return (
     <Section
       id="local"
-      eyebrow="06 · Local APIs"
+      eyebrow="04 · Local APIs"
       title="Your localhost stays on your machine."
       lede="Outpath uses browser Local Network Access for local and private targets. The request goes directly from the supported browser to the local API; Outpath does not proxy that localhost traffic."
     >
@@ -403,7 +311,7 @@ export function SecuritySection() {
   return (
     <Section
       id="security"
-      eyebrow="07 · Security"
+      eyebrow="05 · Security"
       title="An Outpath, not an open proxy."
       lede="Outpath makes outbound requests on your behalf, which is exactly the shape of a server-side request forgery bug. These are the constraints that keep it from becoming one."
     >
