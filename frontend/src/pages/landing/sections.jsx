@@ -302,7 +302,7 @@ export function LocalAccessSection() {
 
 const GUARDS = [
   ['Outbound requests are validated', 'Schemes, ports and resolved IPs are checked before a connection opens, so a URL cannot be pointed at internal infrastructure.'],
-  ['Private ranges are refused', 'Loopback, link-local and RFC 1918 addresses never reach the Outpath server — those requests are rejected outright.'],
+  ['Private ranges are refused', 'Loopback, link-local and RFC 1918 addresses never reach the Outpath server & those requests are rejected outright.'],
   ['Every record is owned', 'Collections, environments and history are scoped to your account at the query level, not the view layer.'],
   ['Secrets stay out of logs', 'Tokens, passwords and request bodies are redacted before anything is written down.'],
 ]
