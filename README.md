@@ -6,10 +6,6 @@
 
 A web-first API testing workspace with collections, environments, assertions and history, where local/private targets hit your machine straight from the browser.
 
-![status](https://img.shields.io/badge/status-active-22C55E?style=flat-square)
-![stack](https://img.shields.io/badge/stack-React%20%2B%20FastAPI-0A0F14?style=flat-square&labelColor=05070A)
-![license](https://img.shields.io/badge/license-private-8B9A9B?style=flat-square)
-
 </div>
 
 <br />
